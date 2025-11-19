@@ -1,0 +1,206 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hatch-messaging-service"
+version = "1.0.0"
+description = "Distributed messaging service for SMS, MMS, Email, and Voice"
+authors = [
+    {name = "Hatch Engineering Team", email = "engineering@usehatchapp.com"}
+]
+readme = "README.md"
+license = {text = "Proprietary"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Communications",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy>=2.0.25",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.1",
+    "redis>=5.0.1",
+    "aioredis>=2.0.1",
+    "aiohttp>=3.9.3",
+    "httpx>=0.26.0",
+    "prometheus-client>=0.19.0",
+    "opentelemetry-api>=1.22.0",
+    "opentelemetry-sdk>=1.22.0",
+    "python-json-logger>=2.0.7",
+    "structlog>=24.1.0",
+    "tenacity>=8.2.3",
+    "circuitbreaker>=2.0.1",
+    "python-multipart>=0.0.6",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "factory-boy>=3.3.0",
+    "faker>=22.0.0",
+    "black>=24.1.0",
+    "flake8>=7.0.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "locust>=2.20.0",
+    "aiosqlite>=0.19.0",
+]
+
+monitoring = [
+    "opentelemetry-instrumentation-fastapi>=0.43b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.43b0",
+    "opentelemetry-exporter-otlp>=1.22.0",
+]
+
+production = [
+    "gunicorn>=21.2.0",
+    "psycopg2-binary>=2.9.9",
+]
+
+[project.scripts]
+messaging-service = "app.main:main"
+message-processor = "app.workers.message_processor:main"
+
+[project.urls]
+Homepage = "https://github.com/Hatch1fy/messaging-service"
+Documentation = "https://github.com/Hatch1fy/messaging-service#readme"
+Repository = "https://github.com/Hatch1fy/messaging-service"
+Issues = "https://github.com/Hatch1fy/messaging-service/issues"
+
+[tool.setuptools.packages.find]
+include = ["app*", "alembic*", "tests*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yml", "*.yaml", "*.json", "*.sql", "*.md"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = """
+    -ra
+    --strict-markers
+    --cov=app
+    --cov-branch
+    --cov-report=term-missing:skip-covered
+    --cov-report=html
+    --cov-report=xml
+    --cov-fail-under=80
+    --maxfail=3
+    --tb=short
+    --asyncio-mode=auto
+"""
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+    "requires_db: Tests that require database",
+    "requires_redis: Tests that require Redis",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | alembic/versions
+)/
+'''
+
+[tool.flake8]
+max-line-length = 100
+exclude = [".git", "__pycache__", "dist", "build", ".venv", "alembic/versions"]
+ignore = ["E203", "E266", "W503"]
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_equality = true
+ignore_missing_imports = true
+exclude = ["tests/", "alembic/"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/alembic/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\(Protocol\\):",
+    "@abstractmethod",
+]
+
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["tests", "alembic"]
+skips = ["B101", "B601"]
+
+[tool.pylint]
+max-line-length = 100
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+    "W0621",  # redefined-outer-name
+    "W0703",  # broad-except
+]

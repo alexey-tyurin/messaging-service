@@ -1,0 +1,91 @@
+# Prometheus configuration for Messaging Service
+
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+  external_labels:
+    monitor: 'messaging-service'
+    environment: 'development'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - 'alertmanager:9093'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alerts.yml"
+  # - "rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Messaging Service API
+  - job_name: 'messaging-api'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['app:8000']
+        labels:
+          service: 'messaging-api'
+          component: 'api'
+
+  # Messaging Service Worker
+  - job_name: 'messaging-worker'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['worker:8001']
+        labels:
+          service: 'messaging-worker'
+          component: 'worker'
+
+  # PostgreSQL Exporter (if using)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgresql'
+          component: 'database'
+
+  # Redis Exporter (if using)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          component: 'cache'
+
+  # Node Exporter for host metrics (optional)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'infrastructure'
+
+# Recording rules for common queries
+# rule_files:
+#   - 'recording_rules.yml'
+
+# Example recording rules (create recording_rules.yml if needed):
+# groups:
+#   - name: messaging_service
+#     interval: 30s
+#     rules:
+#       - record: job:messages_sent:rate5m
+#         expr: rate(messages_total{direction="outbound"}[5m])
+#       
+#       - record: job:api_request_duration:p99
+#         expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+#       
+#       - record: job:queue_depth:avg
+#         expr: avg(queue_depth) by (queue_name)

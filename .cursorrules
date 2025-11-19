@@ -1,0 +1,311 @@
+# Cursor IDE Rules for Messaging Service
+
+## Project Context
+You are working on a production-ready messaging service that handles SMS, MMS, Email, and is extensible for Voice/Voicemail. The system uses FastAPI, PostgreSQL, Redis, and follows event-driven architecture with async processing.
+
+## Code Style Rules
+
+### Python Style
+- Use Python 3.11+ features
+- Always use type hints for function parameters and returns
+- Use async/await for all I/O operations
+- Follow PEP 8 with 100-character line limit
+- Use descriptive variable names (no single letters except in loops)
+
+### Import Organization
+```python
+# Standard library
+import json
+from typing import Dict, List, Optional
+
+# Third-party
+from fastapi import FastAPI, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# Local application
+from app.core.config import settings
+from app.models.database import Message
+```
+
+## Architecture Rules
+
+### Layer Responsibilities
+1. **API Layer** (`app/api/`): Only handle HTTP concerns, validation, serialization
+2. **Service Layer** (`app/services/`): All business logic, no HTTP dependencies
+3. **Provider Layer** (`app/providers/`): External service integrations
+4. **Model Layer** (`app/models/`): Database models only, no business logic
+
+### Dependency Flow
+```
+API -> Service -> Provider
+         ↓
+      Database
+```
+Never: Provider -> Service, Database -> Service
+
+## Database Rules
+
+### Always Use Async
+```python
+# ✅ Correct
+async with db.begin():
+    result = await db.execute(query)
+    
+# ❌ Wrong
+with db.begin():
+    result = db.execute(query)
+```
+
+### Transaction Management
+```python
+# Always use transactions for writes
+async with db.begin():
+    # Multiple operations
+    await db.flush()  # If you need IDs
+    # More operations
+# Auto-commit on exit
+```
+
+## Error Handling Rules
+
+### Service Layer
+```python
+# Raise specific exceptions
+if not valid:
+    raise ValueError(f"Invalid data: {reason}")
+```
+
+### API Layer
+```python
+# Convert to HTTP exceptions
+try:
+    result = await service.operation()
+except ValueError as e:
+    raise HTTPException(status_code=400, detail=str(e))
+except Exception as e:
+    logger.error(f"Operation failed: {e}")
+    raise HTTPException(status_code=500, detail="Internal error")
+```
+
+## Testing Rules
+
+### Test Structure
+```python
+@pytest.mark.asyncio
+async def test_feature_description(async_db, fixture):
+    # Arrange
+    service = ServiceClass(async_db)
+    
+    # Act
+    result = await service.method(data)
+    
+    # Assert
+    assert result.field == expected_value
+```
+
+### Mock External Services
+```python
+@patch('app.providers.base.TwilioProvider.send_message')
+async def test_with_mock(mock_send):
+    mock_send.return_value = {"status": "sent"}
+    # Test logic
+```
+
+## Common Patterns
+
+### Adding New Endpoints
+1. Define Pydantic models in `app/api/v1/models.py`
+2. Create endpoint in `app/api/v1/{resource}.py`
+3. Implement logic in `app/services/{resource}_service.py`
+4. Add tests in `tests/unit/test_{resource}_service.py`
+
+### Adding Background Tasks
+1. Add method to `app/workers/message_processor.py`
+2. Register in `start()` method
+3. Handle graceful shutdown
+4. Add monitoring metrics
+
+### Caching Pattern
+```python
+# Check cache
+key = f"cache:{identifier}"
+cached = await redis_manager.get(key)
+if cached:
+    return cached
+
+# Compute and cache
+result = await compute()
+await redis_manager.set(key, result, ttl=300)
+return result
+```
+
+## Performance Guidelines
+
+### Database Queries
+- Always use indexes for foreign keys
+- Use `selectinload` for relationships
+- Batch operations when possible
+- Add `.limit()` to prevent large result sets
+
+### Redis Usage
+- Use appropriate TTL for cache entries
+- Use Redis Streams for queuing
+- Implement Pub/Sub for real-time updates
+- Monitor memory usage
+
+## Security Rules
+
+### Input Validation
+- Always validate with Pydantic models
+- Sanitize user inputs
+- Use parameterized queries (SQLAlchemy does this)
+
+### Sensitive Data
+- Never log passwords or API keys
+- Mask PII in logs
+- Use environment variables for secrets
+
+## Monitoring Requirements
+
+### Every Service Method Should:
+```python
+@trace_operation("operation_name")
+@monitor_performance("operation_name")
+async def service_method(self):
+    logger.info("Starting operation", extra={"context": data})
+    
+    with MetricsCollector.track_duration("operation", "type"):
+        result = await work()
+    
+    MetricsCollector.track_message("direction", "type", "status", "provider")
+    return result
+```
+
+## File Naming Conventions
+
+- Services: `{resource}_service.py`
+- Models: `{resource}.py` or grouped in `database.py`
+- API routes: `{resource}s.py` (plural)
+- Tests: `test_{module_name}.py`
+
+## Git Commit Messages
+
+Format: `type: description`
+
+Types:
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code refactoring
+- `test`: Adding tests
+- `docs`: Documentation
+- `perf`: Performance improvement
+- `chore`: Maintenance
+
+Example: `feat: add voice call provider integration`
+
+## Documentation Requirements
+
+### Every Function Needs:
+```python
+async def function_name(param: Type) -> ReturnType:
+    """
+    Brief description.
+    
+    Args:
+        param: Parameter description
+        
+    Returns:
+        What it returns
+        
+    Raises:
+        ValueError: When validation fails
+    """
+```
+
+## Environment Variables
+
+Always define in:
+1. `.env.example` with placeholder
+2. `app/core/config.py` with type and default
+3. `docker-compose.yml` if needed
+
+## When Adding Features
+
+1. Check PRD.md for requirements
+2. Check ARCHITECTURE.md for system design
+3. Follow existing patterns in codebase
+4. Add tests (unit + integration)
+5. Update documentation
+6. Add metrics and logging
+
+## Debugging Tips
+
+### Check Logs
+```python
+logger.debug(f"Variable state: {variable}")
+logger.info(f"Operation completed", extra={"id": item_id})
+logger.error(f"Operation failed", exc_info=True)
+```
+
+### Use Breakpoints
+```python
+import ipdb; ipdb.set_trace()  # Development only
+```
+
+### Check Metrics
+Visit http://localhost:8000/metrics
+
+## Common Issues and Solutions
+
+### "Connection pool exhausted"
+- Check for missing `await` keywords
+- Ensure sessions are closed properly
+- Review pool size in config
+
+### "Object already attached to session"
+- Use `db.merge()` instead of `db.add()`
+- Create new objects instead of reusing
+
+### "Timeout waiting for message"
+- Check Redis connection
+- Verify queue names match
+- Check worker is running
+
+## AI Assistant Instructions
+
+When generating code:
+1. Always follow async/await patterns
+2. Include proper error handling
+3. Add logging and metrics
+4. Write tests alongside implementation
+5. Use type hints consistently
+6. Follow the layer architecture
+7. Reference PRD.md for business requirements
+
+When reviewing code:
+1. Check for missing `await` keywords
+2. Verify error handling is complete
+3. Ensure logging is present
+4. Confirm tests exist
+5. Validate against architecture patterns
+
+## Quick Commands
+
+```bash
+# Development
+make run          # Start API
+make worker       # Start worker
+make test         # Run tests
+make lint         # Check code style
+
+# Docker
+docker-compose up      # Start all services
+docker-compose logs -f # View logs
+docker-compose down    # Stop services
+
+# Database
+make migrate      # Apply migrations
+make migration    # Create new migration
+```
+
+Remember: The goal is maintainable, scalable, observable code that follows established patterns.

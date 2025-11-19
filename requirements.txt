@@ -1,0 +1,50 @@
+# Core Framework
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+pydantic==2.6.0
+pydantic-settings==2.2.0
+
+# Database
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Redis
+redis==5.0.1
+aioredis==2.0.1
+
+# Async Support
+aiohttp==3.9.3
+httpx==0.26.0
+
+# Observability
+prometheus-client==0.19.0
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-instrumentation-fastapi==0.43b0
+opentelemetry-instrumentation-sqlalchemy==0.43b0
+python-json-logger==2.0.7
+structlog==24.1.0
+
+# Utilities
+python-multipart==0.0.6
+python-dotenv==1.0.0
+tenacity==8.2.3
+circuitbreaker==2.1.0
+ratelimit==2.2.1
+
+# Testing
+pytest==8.0.0
+pytest-asyncio==0.23.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+factory-boy==3.3.0
+faker==22.0.0
+httpx==0.26.0
+
+# Development
+black==24.1.0
+flake8==7.0.0
+mypy==1.8.0
+pre-commit==3.6.0

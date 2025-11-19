@@ -1,110 +1,177 @@
 #!/bin/bash
 
-# Test script for messaging service endpoints
-# This script tests the local messaging service using the JSON examples from README.md
+# Test script for Messaging Service API
+set -e
 
-BASE_URL="http://localhost:8080"
-CONTENT_TYPE="Content-Type: application/json"
+# Configuration
+API_URL=${API_URL:-http://localhost:8000}
+API_PREFIX="/api/v1"
 
-echo "=== Testing Messaging Service Endpoints ==="
-echo "Base URL: $BASE_URL"
-echo
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Test 1: Send SMS
-echo "1. Testing SMS send..."
-curl -X POST "$BASE_URL/api/messages/sms" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "+12016661234",
-    "to": "+18045551234",
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${BLUE}Messaging Service API Test Suite${NC}"
+echo -e "${BLUE}=========================================${NC}"
+echo ""
+
+# Function to make API calls
+api_call() {
+    local method=$1
+    local endpoint=$2
+    local data=$3
+    local expected_status=$4
+    
+    echo -e "${YELLOW}Testing: $method $endpoint${NC}"
+    
+    if [ -z "$data" ]; then
+        response=$(curl -s -w "\n%{http_code}" -X $method "$API_URL$API_PREFIX$endpoint" -H "Content-Type: application/json")
+    else
+        response=$(curl -s -w "\n%{http_code}" -X $method "$API_URL$API_PREFIX$endpoint" -H "Content-Type: application/json" -d "$data")
+    fi
+    
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+    
+    if [ "$http_code" = "$expected_status" ]; then
+        echo -e "${GREEN}✓ Status: $http_code (Expected: $expected_status)${NC}"
+        if [ ! -z "$body" ]; then
+            echo "Response: $body" | jq '.' 2>/dev/null || echo "$body"
+        fi
+        echo ""
+        return 0
+    else
+        echo -e "${RED}✗ Status: $http_code (Expected: $expected_status)${NC}"
+        echo "Response: $body"
+        echo ""
+        return 1
+    fi
+}
+
+# Health check
+echo -e "${BLUE}1. Health Check Tests${NC}"
+echo "------------------------"
+api_call "GET" "/../health" "" "200"
+api_call "GET" "/../ready" "" "200"
+api_call "GET" "/../live" "" "200"
+
+# Send SMS message
+echo -e "${BLUE}2. Send SMS Message${NC}"
+echo "------------------------"
+SMS_DATA='{
+    "from": "+15551234567",
+    "to": "+15559876543",
     "type": "sms",
-    "body": "Hello! This is a test SMS message.",
-    "attachments": null,
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+    "body": "Test SMS message from API test suite"
+}'
+SMS_RESPONSE=$(api_call "POST" "/messages/send" "$SMS_DATA" "201")
 
-# Test 2: Send MMS
-echo "2. Testing MMS send..."
-curl -X POST "$BASE_URL/api/messages/sms" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "+12016661234",
-    "to": "+18045551234",
+# Extract message ID from response (if needed for further tests)
+MESSAGE_ID=$(echo "$SMS_RESPONSE" | grep -o '"id":"[^"]*' | grep -o '[^"]*$' | head -n1)
+
+# Send MMS message
+echo -e "${BLUE}3. Send MMS Message${NC}"
+echo "------------------------"
+MMS_DATA='{
+    "from": "+15551234567",
+    "to": "+15559876543",
     "type": "mms",
-    "body": "Hello! This is a test MMS message with attachment.",
-    "attachments": ["https://example.com/image.jpg"],
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+    "body": "Test MMS message with attachment",
+    "attachments": ["https://example.com/image.jpg"]
+}'
+api_call "POST" "/messages/send" "$MMS_DATA" "201"
 
-# Test 3: Send Email
-echo "3. Testing Email send..."
-curl -X POST "$BASE_URL/api/messages/email" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "user@usehatchapp.com",
-    "to": "contact@gmail.com",
-    "body": "Hello! This is a test email message with <b>HTML</b> formatting.",
-    "attachments": ["https://example.com/document.pdf"],
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+# Send email
+echo -e "${BLUE}4. Send Email${NC}"
+echo "------------------------"
+EMAIL_DATA='{
+    "from": "sender@example.com",
+    "to": "recipient@example.com",
+    "type": "email",
+    "body": "<h1>Test Email</h1><p>This is a test email from the API test suite.</p>",
+    "attachments": []
+}'
+api_call "POST" "/messages/send" "$EMAIL_DATA" "201"
 
-# Test 4: Simulate incoming SMS webhook
-echo "4. Testing incoming SMS webhook..."
-curl -X POST "$BASE_URL/api/webhooks/sms" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "+18045551234",
-    "to": "+12016661234",
+# List messages
+echo -e "${BLUE}5. List Messages${NC}"
+echo "------------------------"
+api_call "GET" "/messages?limit=10" "" "200"
+
+# Get specific message (if we have an ID)
+if [ ! -z "$MESSAGE_ID" ]; then
+    echo -e "${BLUE}6. Get Specific Message${NC}"
+    echo "------------------------"
+    api_call "GET" "/messages/$MESSAGE_ID" "" "200"
+fi
+
+# List conversations
+echo -e "${BLUE}7. List Conversations${NC}"
+echo "------------------------"
+api_call "GET" "/conversations?limit=10" "" "200"
+
+# Search conversations
+echo -e "${BLUE}8. Search Conversations${NC}"
+echo "------------------------"
+SEARCH_DATA='{
+    "query": "test",
+    "limit": 5
+}'
+api_call "POST" "/conversations/search" "$SEARCH_DATA" "200"
+
+# Test webhook endpoints
+echo -e "${BLUE}9. Webhook Tests${NC}"
+echo "------------------------"
+TWILIO_WEBHOOK='{
+    "messaging_provider_id": "test_123",
+    "from": "+15551234567",
+    "to": "+15559876543",
     "type": "sms",
-    "messaging_provider_id": "message-1",
-    "body": "This is an incoming SMS message",
-    "attachments": null,
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+    "body": "Incoming SMS via webhook",
+    "timestamp": "2024-01-01T12:00:00Z"
+}'
+api_call "POST" "/webhooks/twilio" "$TWILIO_WEBHOOK" "200"
 
-# Test 5: Simulate incoming MMS webhook
-echo "5. Testing incoming MMS webhook..."
-curl -X POST "$BASE_URL/api/webhooks/sms" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "+18045551234",
-    "to": "+12016661234",
-    "type": "mms",
-    "messaging_provider_id": "message-2",
-    "body": "This is an incoming MMS message",
-    "attachments": ["https://example.com/received-image.jpg"],
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+# Test rate limiting (optional)
+echo -e "${BLUE}10. Rate Limiting Test${NC}"
+echo "------------------------"
+echo "Sending multiple requests to test rate limiting..."
+for i in {1..5}; do
+    echo -n "Request $i: "
+    curl -s -o /dev/null -w "%{http_code}\n" -X GET "$API_URL$API_PREFIX/messages"
+    sleep 0.5
+done
+echo ""
 
-# Test 6: Simulate incoming Email webhook
-echo "6. Testing incoming Email webhook..."
-curl -X POST "$BASE_URL/api/webhooks/email" \
-  -H "$CONTENT_TYPE" \
-  -d '{
-    "from": "contact@gmail.com",
-    "to": "user@usehatchapp.com",
-    "xillio_id": "message-3",
-    "body": "<html><body>This is an incoming email with <b>HTML</b> content</body></html>",
-    "attachments": ["https://example.com/received-document.pdf"],
-    "timestamp": "2024-11-01T14:00:00Z"
-  }' \
-  -w "\nStatus: %{http_code}\n\n"
+# Performance test with concurrent requests
+echo -e "${BLUE}11. Performance Test${NC}"
+echo "------------------------"
+echo "Sending 10 concurrent requests..."
+for i in {1..10}; do
+    (curl -s -o /dev/null -w "Request $i: %{http_code} - Time: %{time_total}s\n" -X GET "$API_URL$API_PREFIX/messages") &
+done
+wait
+echo ""
 
-# Test 7: Get conversations
-echo "7. Testing get conversations..."
-curl -X GET "$BASE_URL/api/conversations" \
-  -H "$CONTENT_TYPE" \
-  -w "\nStatus: %{http_code}\n\n"
+# Metrics endpoint
+echo -e "${BLUE}12. Metrics Check${NC}"
+echo "------------------------"
+echo "Checking metrics endpoint..."
+curl -s "$API_URL/metrics" | head -20
+echo "..."
+echo ""
 
-# Test 8: Get messages for a conversation (example conversation ID)
-echo "8. Testing get messages for conversation..."
-curl -X GET "$BASE_URL/api/conversations/1/messages" \
-  -H "$CONTENT_TYPE" \
-  -w "\nStatus: %{http_code}\n\n"
-
-echo "=== Test script completed ===" 
+# Summary
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${GREEN}API Test Suite Complete!${NC}"
+echo -e "${BLUE}=========================================${NC}"
+echo ""
+echo "For more comprehensive testing, run:"
+echo "  pytest tests/"
+echo ""
+echo "For load testing, run:"
+echo "  locust -f tests/load/locustfile.py --host=$API_URL"
