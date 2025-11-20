@@ -109,8 +109,9 @@ class DatabaseManager:
             bool: True if database is healthy
         """
         try:
+            from sqlalchemy import text
             async with self.engine.begin() as conn:
-                result = await conn.execute("SELECT 1")
+                result = await conn.execute(text("SELECT 1"))
                 return result.scalar() == 1
         except Exception as e:
             logger.error(f"Database health check failed: {e}")

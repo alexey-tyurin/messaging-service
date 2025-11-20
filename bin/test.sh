@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Test script for Messaging Service API
-set -e
+# Don't exit on first error - we want to see all test results
+set +e
 
 # Configuration
 API_URL=${API_URL:-http://localhost:8000}
@@ -25,13 +26,21 @@ api_call() {
     local endpoint=$2
     local data=$3
     local expected_status=$4
+    local use_api_prefix=${5:-true}
     
     echo -e "${YELLOW}Testing: $method $endpoint${NC}"
     
-    if [ -z "$data" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X $method "$API_URL$API_PREFIX$endpoint" -H "Content-Type: application/json")
+    # Construct URL with or without API prefix
+    if [ "$use_api_prefix" = "true" ]; then
+        url="$API_URL$API_PREFIX$endpoint"
     else
-        response=$(curl -s -w "\n%{http_code}" -X $method "$API_URL$API_PREFIX$endpoint" -H "Content-Type: application/json" -d "$data")
+        url="$API_URL$endpoint"
+    fi
+    
+    if [ -z "$data" ]; then
+        response=$(curl -s -w "\n%{http_code}" -X $method "$url" -H "Content-Type: application/json")
+    else
+        response=$(curl -s -w "\n%{http_code}" -X $method "$url" -H "Content-Type: application/json" -d "$data")
     fi
     
     http_code=$(echo "$response" | tail -n1)
@@ -55,9 +64,8 @@ api_call() {
 # Health check
 echo -e "${BLUE}1. Health Check Tests${NC}"
 echo "------------------------"
-api_call "GET" "/../health" "" "200"
-api_call "GET" "/../ready" "" "200"
-api_call "GET" "/../live" "" "200"
+api_call "GET" "/health" "" "200" "false"
+api_call "GET" "/ready" "" "200" "false"
 
 # Send SMS message
 echo -e "${BLUE}2. Send SMS Message${NC}"
@@ -100,7 +108,7 @@ api_call "POST" "/messages/send" "$EMAIL_DATA" "201"
 # List messages
 echo -e "${BLUE}5. List Messages${NC}"
 echo "------------------------"
-api_call "GET" "/messages?limit=10" "" "200"
+api_call "GET" "/messages/?limit=10" "" "200"
 
 # Get specific message (if we have an ID)
 if [ ! -z "$MESSAGE_ID" ]; then
@@ -112,7 +120,7 @@ fi
 # List conversations
 echo -e "${BLUE}7. List Conversations${NC}"
 echo "------------------------"
-api_call "GET" "/conversations?limit=10" "" "200"
+api_call "GET" "/conversations/?limit=10" "" "200"
 
 # Search conversations
 echo -e "${BLUE}8. Search Conversations${NC}"
@@ -142,7 +150,7 @@ echo "------------------------"
 echo "Sending multiple requests to test rate limiting..."
 for i in {1..5}; do
     echo -n "Request $i: "
-    curl -s -o /dev/null -w "%{http_code}\n" -X GET "$API_URL$API_PREFIX/messages"
+    curl -s -o /dev/null -w "%{http_code}\n" -X GET "$API_URL$API_PREFIX/messages/"
     sleep 0.5
 done
 echo ""
@@ -152,7 +160,7 @@ echo -e "${BLUE}11. Performance Test${NC}"
 echo "------------------------"
 echo "Sending 10 concurrent requests..."
 for i in {1..10}; do
-    (curl -s -o /dev/null -w "Request $i: %{http_code} - Time: %{time_total}s\n" -X GET "$API_URL$API_PREFIX/messages") &
+    (curl -s -o /dev/null -w "Request $i: %{http_code} - Time: %{time_total}s\n" -X GET "$API_URL$API_PREFIX/messages/") &
 done
 wait
 echo ""

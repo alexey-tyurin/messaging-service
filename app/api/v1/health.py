@@ -196,7 +196,8 @@ async def dependency_check(db: AsyncSession = Depends(get_db)):
         
         # Database version and connection info
         try:
-            result = await db.execute("SELECT version()")
+            from sqlalchemy import text
+            result = await db.execute(text("SELECT version()"))
             db_version = result.scalar()
             
             dependencies["postgresql"] = {
