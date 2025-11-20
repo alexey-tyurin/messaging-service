@@ -4,7 +4,7 @@
 set +e
 
 # Configuration
-API_URL=${API_URL:-http://localhost:8000}
+API_URL=${API_URL:-http://localhost:8080}
 API_PREFIX="/api/v1"
 
 # Colors for output

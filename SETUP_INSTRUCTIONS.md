@@ -48,7 +48,7 @@ The application will:
 - ✅ Detect your conda/virtual environment
 - ✅ Check PostgreSQL and Redis connectivity  
 - ✅ Run database migrations
-- ✅ Start the FastAPI server on http://localhost:8000
+- ✅ Start the FastAPI server on http://localhost:8080
 
 ## Troubleshooting
 
@@ -98,9 +98,9 @@ These are automatically set by the startup script when running locally.
 
 Once the application is running:
 
-1. **API Documentation**: http://localhost:8000/docs
-2. **Health Check**: http://localhost:8000/health
-3. **Metrics**: http://localhost:8000/metrics
+1. **API Documentation**: http://localhost:8080/docs
+2. **Health Check**: http://localhost:8080/health
+3. **Metrics**: http://localhost:8080/metrics
 4. **Prometheus**: http://localhost:9090
 5. **Grafana**: http://localhost:3000 (admin/admin)
 

@@ -253,7 +253,7 @@ import ipdb; ipdb.set_trace()  # Development only
 ```
 
 ### Check Metrics
-Visit http://localhost:8000/metrics
+Visit http://localhost:8080/metrics
 
 ## Common Issues and Solutions
 

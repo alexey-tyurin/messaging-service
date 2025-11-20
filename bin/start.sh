@@ -174,9 +174,9 @@ asyncio.run(init())
 }
 
 # Start the application
-echo -e "${GREEN}Starting application on http://localhost:8000${NC}"
-echo -e "${GREEN}API Documentation: http://localhost:8000/docs${NC}"
-echo -e "${GREEN}Health Check: http://localhost:8000/health${NC}"
+echo -e "${GREEN}Starting application on http://localhost:8080${NC}"
+echo -e "${GREEN}API Documentation: http://localhost:8080/docs${NC}"
+echo -e "${GREEN}Health Check: http://localhost:8080/health${NC}"
 echo -e "${YELLOW}Using Python: $PYTHON_CMD${NC}"
 
 # Set number of workers based on environment
@@ -186,7 +186,7 @@ if [ "$ENVIRONMENT" = "production" ]; then
     exec $PYTHON_CMD -m gunicorn app.main:app \
         --workers $WORKERS \
         --worker-class uvicorn.workers.UvicornWorker \
-        --bind 0.0.0.0:8000 \
+        --bind 0.0.0.0:8080 \
         --access-log - \
         --error-log - \
         --log-level info
@@ -194,7 +194,7 @@ else
     echo "Starting in development mode..."
     exec $PYTHON_CMD -m uvicorn app.main:app \
         --host 0.0.0.0 \
-        --port 8000 \
+        --port 8080 \
         --reload \
         --log-level debug
 fi

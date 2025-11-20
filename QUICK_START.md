@@ -74,13 +74,13 @@ make migrate
 5. **Start the application:**
 ```bash
 # Using the conda Python directly
-/Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+/Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Or create an alias for convenience:
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
-alias messaging-run="cd /path/to/messaging-service && /Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+alias messaging-run="cd /path/to/messaging-service && /Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"
 ```
 
 6. **Stop the application:**
@@ -94,10 +94,10 @@ make restart
 ```
 
 The service will be available at:
-- API: http://localhost:8000
-- Documentation: http://localhost:8000/api/v1/docs
-- Metrics: http://localhost:8000/metrics
-- Health: http://localhost:8000/health
+- API: http://localhost:8080
+- Documentation: http://localhost:8080/api/v1/docs
+- Metrics: http://localhost:8080/metrics
+- Health: http://localhost:8080/health
 
 ### Docker Development (Full Stack)
 
@@ -116,7 +116,7 @@ docker compose down
 
 **Error: "Address already in use"**
 ```bash
-make stop  # Kill all processes on port 8000
+make stop  # Kill all processes on port 8080
 ```
 
 **Error: "PostgreSQL is not available"**
@@ -145,7 +145,7 @@ For more detailed troubleshooting, see [START_STOP.md](./START_STOP.md)
 
 #### Send Message
 ```bash
-curl -X POST http://localhost:8000/api/v1/messages/send \
+curl -X POST http://localhost:8080/api/v1/messages/send \
   -H "Content-Type: application/json" \
   -d '{
     "from": "+15551234567",
@@ -157,19 +157,19 @@ curl -X POST http://localhost:8000/api/v1/messages/send \
 
 #### List Messages
 ```bash
-curl http://localhost:8000/api/v1/messages?limit=10
+curl http://localhost:8080/api/v1/messages?limit=10
 ```
 
 ### Conversations
 
 #### Get Conversation
 ```bash
-curl http://localhost:8000/api/v1/conversations/{conversation_id}
+curl http://localhost:8080/api/v1/conversations/{conversation_id}
 ```
 
 #### List Conversations
 ```bash
-curl http://localhost:8000/api/v1/conversations?participant=+15551234567
+curl http://localhost:8080/api/v1/conversations?participant=+15551234567
 ```
 
 ### Webhooks
@@ -239,7 +239,7 @@ pytest tests/integration -v
 
 ### Load Testing
 ```bash
-locust -f tests/load/locustfile.py --host=http://localhost:8000
+locust -f tests/load/locustfile.py --host=http://localhost:8080
 ```
 
 ### API Testing
@@ -352,7 +352,7 @@ make redis-cli     # Redis CLI
 
 ## 📚 Documentation
 
-- API Documentation: http://localhost:8000/docs
+- API Documentation: http://localhost:8080/docs
 - Architecture: See `ARCHITECTURE.md`
 - Database Schema: See migrations in `alembic/versions/`
 

@@ -96,7 +96,7 @@ app-status:
 		PID=$$(cat .app.pid); \
 		if ps -p $$PID > /dev/null 2>&1; then \
 			echo "✓ Application is running (PID: $$PID)"; \
-			lsof -i:8000 | grep LISTEN || true; \
+			lsof -i:8080 | grep LISTEN || true; \
 		else \
 			echo "✗ Application is not running"; \
 			rm -f .app.pid; \
@@ -196,7 +196,7 @@ build-prod:
 run-prod:
 	docker run -d \
 		--name $(APP_NAME) \
-		-p 8000:8000 \
+		-p 8080:8080 \
 		--env-file .env \
 		$(APP_NAME):latest
 
@@ -210,31 +210,31 @@ ci-lint:
 
 # Performance testing
 load-test:
-	locust -f tests/load/locustfile.py --host=http://localhost:8000
+	locust -f tests/load/locustfile.py --host=http://localhost:8080
 
 # Documentation
 docs:
-	@echo "API documentation available at http://localhost:8000/docs"
+	@echo "API documentation available at http://localhost:8080/docs"
 	@echo "Architecture documentation in ARCHITECTURE.md"
 
 # Health checks
 health:
-	curl -f http://localhost:8000/health || exit 1
+	curl -f http://localhost:8080/health || exit 1
 
 ready:
-	curl -f http://localhost:8000/ready || exit 1
+	curl -f http://localhost:8080/ready || exit 1
 
 # Monitoring
 metrics:
-	curl http://localhost:8000/metrics
+	curl http://localhost:8080/metrics
 
 # Quick start for development
 quickstart: setup
 	@echo "========================================="
 	@echo "Messaging Service is ready!"
 	@echo "========================================="
-	@echo "API: http://localhost:8000"
-	@echo "Docs: http://localhost:8000/docs"
+	@echo "API: http://localhost:8080"
+	@echo "Docs: http://localhost:8080/docs"
 	@echo "Prometheus: http://localhost:9090"
 	@echo "Grafana: http://localhost:3000 (admin/admin)"
 	@echo "========================================="

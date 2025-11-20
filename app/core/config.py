@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # API Settings
     api_prefix: str = "/api/v1"
     host: str = Field(default="0.0.0.0", env="HOST")
-    port: int = Field(default=8000, env="PORT")
+    port: int = Field(default=8080, env="PORT")
     workers: int = Field(default=4, env="WORKERS")
     
     # Security
@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     
     # CORS Settings
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
+        default=["http://localhost:3000", "http://localhost:8080"],
         env="CORS_ORIGINS"
     )
     cors_allow_credentials: bool = Field(default=True, env="CORS_ALLOW_CREDENTIALS")

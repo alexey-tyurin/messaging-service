@@ -319,11 +319,11 @@ logger.debug(f"State: {variable}")
 import ipdb; ipdb.set_trace()  # Breakpoint
 
 # Check health
-curl http://localhost:8000/health
-curl http://localhost:8000/ready
+curl http://localhost:8080/health
+curl http://localhost:8080/ready
 
 # View metrics
-curl http://localhost:8000/metrics | grep message
+curl http://localhost:8080/metrics | grep message
 
 # Check logs
 docker compose logs -f app

@@ -71,8 +71,8 @@ kill_by_pattern() {
     fi
 }
 
-# Stop FastAPI application on port 8000
-kill_port 8000 "FastAPI"
+# Stop FastAPI application on port 8080
+kill_port 8080 "FastAPI"
 
 # Stop any uvicorn processes
 kill_by_pattern "uvicorn.*app.main:app" "Uvicorn"

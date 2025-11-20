@@ -52,7 +52,7 @@ make app-logs
 
 ### Test While Running
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 make test
 ```
 
@@ -75,7 +75,7 @@ make restart-app
 conda activate py311
 make run-bg
 make app-status
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 make test
 make app-logs  # Ctrl+C to exit
 make stop

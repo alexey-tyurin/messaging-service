@@ -26,9 +26,9 @@ make restart
 **📖 See [START_STOP.md](./START_STOP.md) for complete instructions and troubleshooting.**
 
 **Application URLs:**
-- 📚 API Docs: http://localhost:8000/docs
-- 💚 Health: http://localhost:8000/health
-- 📊 Metrics: http://localhost:8000/metrics
+- 📚 API Docs: http://localhost:8080/docs
+- 💚 Health: http://localhost:8080/health
+- 📊 Metrics: http://localhost:8080/metrics
 
 ---
 

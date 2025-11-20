@@ -52,7 +52,7 @@ make status
 Output:
 ```
 ✓ Application is running (PID: 12345)
-python3   12345 user   8u  IPv4  TCP *:8000 (LISTEN)
+python3   12345 user   8u  IPv4  TCP *:8080 (LISTEN)
 ```
 
 ### View Logs (Background Mode)
@@ -97,7 +97,7 @@ make run
 Terminal 2 (Commands):
 ```bash
 conda activate py311
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 make test
 ```
 
@@ -110,7 +110,7 @@ conda activate py311
 make run-bg
 
 # Now you can run other commands
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 make test
 
 # View logs when needed
@@ -126,11 +126,11 @@ make stop
 # Check application status
 make status
 
-# Check port 8000
-lsof -i:8000
+# Check port 8080
+lsof -i:8080
 
 # Or with netstat
-netstat -an | grep 8000
+netstat -an | grep 8080
 ```
 
 ---
@@ -152,7 +152,7 @@ netstat -an | grep 8000
 make stop
 
 # If that doesn't work, kill manually
-lsof -ti:8000 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
 ```
 
 ### Can't Find Logs
@@ -175,10 +175,10 @@ make run-bg
 make stop
 
 # Check if anything is still running
-lsof -i:8000
+lsof -i:8080
 
 # Force kill if needed
-lsof -ti:8000 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
 
 # Start again
 make run-bg
@@ -196,11 +196,11 @@ tail -f logs/app.log
 ### Check Health While Running
 ```bash
 # In background mode, you can run:
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # Check all endpoints
-curl http://localhost:8000/ready
-curl http://localhost:8000/metrics
+curl http://localhost:8080/ready
+curl http://localhost:8080/metrics
 ```
 
 ### Monitor Requests
@@ -221,7 +221,7 @@ tail -f logs/app.log | grep "Request"
 
 2. **Quick test after changes:**
    ```bash
-   make restart && sleep 2 && curl http://localhost:8000/health
+   make restart && sleep 2 && curl http://localhost:8080/health
    ```
 
 3. **Clean start:**
@@ -235,7 +235,7 @@ tail -f logs/app.log | grep "Request"
 
 5. **Check everything is working:**
    ```bash
-   make status && curl http://localhost:8000/health
+   make status && curl http://localhost:8080/health
    ```
 
 ---
@@ -266,11 +266,11 @@ make run-bg
 
 # 3. Verify it's working
 make status
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 
 # 4. Do your work (all in same terminal!)
 make test
-curl http://localhost:8000/api/v1/messages/
+curl http://localhost:8080/api/v1/messages/
 
 # 5. Check logs if needed
 make logs  # Press Ctrl+C to exit

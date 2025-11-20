@@ -19,12 +19,12 @@ conda activate py311
 ./bin/start.sh
 ```
 
-The application will start on **http://localhost:8000**
+The application will start on **http://localhost:8080**
 
 Available endpoints:
-- 📚 **API Docs**: http://localhost:8000/docs
-- 💚 **Health Check**: http://localhost:8000/health
-- 📊 **Metrics**: http://localhost:8000/metrics
+- 📚 **API Docs**: http://localhost:8080/docs
+- 💚 **Health Check**: http://localhost:8080/health
+- 📊 **Metrics**: http://localhost:8080/metrics
 
 ## 🛑 Stopping the Application
 
@@ -41,7 +41,7 @@ make stop
 ```
 
 This will:
-- ✅ Kill all processes on port 8000
+- ✅ Kill all processes on port 8080
 - ✅ Stop uvicorn processes
 - ✅ Stop worker processes
 - ✅ Stop gunicorn processes (if any)
@@ -59,7 +59,7 @@ This will:
 
 ## ⚠️ Troubleshooting
 
-### Error: "Address already in use" (Port 8000)
+### Error: "Address already in use" (Port 8080)
 
 **Solution**: Stop existing services first
 
@@ -79,7 +79,7 @@ make run
 
 1. **Check if running:**
 ```bash
-lsof -i:8000
+lsof -i:8080
 ```
 
 2. **Activate correct environment:**
@@ -181,7 +181,7 @@ docker compose logs -f redis
 ### Check if app is running
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 ```
 
 Expected response:
@@ -192,10 +192,10 @@ Expected response:
 }
 ```
 
-### Check what's using port 8000
+### Check what's using port 8080
 
 ```bash
-lsof -i:8000
+lsof -i:8080
 ```
 
 ### Check all running services
@@ -220,8 +220,8 @@ ps aux | grep -E "uvicorn|gunicorn|message_processor"
 If `make stop` doesn't work, manually kill processes:
 
 ```bash
-# Kill everything on port 8000
-kill -9 $(lsof -ti:8000)
+# Kill everything on port 8080
+kill -9 $(lsof -ti:8080)
 
 # Or stop all Python services
 pkill -f "uvicorn|app.main"
