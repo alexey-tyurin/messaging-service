@@ -1,6 +1,6 @@
 # Makefile for Messaging Service
 
-.PHONY: help setup install run test clean docker-up docker-down docker-build migrate lint format
+.PHONY: help setup install run stop restart test clean docker-up docker-down docker-build migrate lint format
 
 # Variables
 PYTHON := python3
@@ -14,6 +14,8 @@ help:
 	@echo "  setup        - Set up the development environment"
 	@echo "  install      - Install Python dependencies"
 	@echo "  run          - Run the application locally"
+	@echo "  stop         - Stop all running services"
+	@echo "  restart      - Restart the application"
 	@echo "  worker       - Run the background worker"
 	@echo "  test         - Run tests"
 	@echo "  lint         - Run linting"
@@ -38,6 +40,16 @@ install:
 # Run the application
 run:
 	./bin/start.sh
+
+# Stop all services
+stop:
+	./bin/stop.sh
+
+# Restart the application
+restart: stop
+	@echo "Waiting 2 seconds before restart..."
+	@sleep 2
+	$(MAKE) run
 
 # Run the background worker
 worker:

@@ -2,6 +2,36 @@
 
 This is a scaffold for Hatch's backend interview project. It includes basic setup for development, testing, and deployment.
 
+---
+
+## 🚀 Quick Start (For Running the Application)
+
+```bash
+# 1. Activate your conda environment
+conda activate py311
+
+# 2. Start Docker services (PostgreSQL & Redis)
+docker compose up -d postgres redis
+
+# 3. Run the application
+make run
+
+# 4. Stop the application
+make stop
+
+# 5. Restart the application
+make restart
+```
+
+**📖 See [START_STOP.md](./START_STOP.md) for complete instructions and troubleshooting.**
+
+**Application URLs:**
+- 📚 API Docs: http://localhost:8000/docs
+- 💚 Health: http://localhost:8000/health
+- 📊 Metrics: http://localhost:8000/metrics
+
+---
+
 ## Guidelines
 
 At Hatch, we work with several message providers to offer a unified way for our Customers to  communicate to their Contacts. Today we offer SMS, MMS, email, voice calls, and voicemail drops. Your task is to implement an HTTP service that supports the core messaging functionality of Hatch, on a much smaller scale. Specific instructions and guidelines on completing the project are below.
