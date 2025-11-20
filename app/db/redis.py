@@ -26,21 +26,28 @@ class RedisManager:
     async def init_redis(self):
         """Initialize Redis connection pool."""
         try:
-            self.redis_client = redis.Redis(
-                host=settings.redis_host,
-                port=settings.redis_port,
-                password=settings.redis_password,
-                db=settings.redis_db,
-                decode_responses=True,
-                max_connections=settings.redis_pool_size,
-                socket_connect_timeout=settings.redis_pool_timeout,
-                socket_keepalive=True,
-                socket_keepalive_options={
+            # Build connection parameters
+            redis_params = {
+                "host": settings.redis_host,
+                "port": settings.redis_port,
+                "password": settings.redis_password if settings.redis_password else None,
+                "db": settings.redis_db,
+                "decode_responses": True,
+                "max_connections": settings.redis_pool_size,
+                "socket_connect_timeout": settings.redis_pool_timeout,
+                "socket_keepalive": True,
+            }
+            
+            # Only set keepalive options on Linux (they're not compatible with macOS)
+            import platform
+            if platform.system() == "Linux":
+                redis_params["socket_keepalive_options"] = {
                     1: 1,  # TCP_KEEPIDLE
                     2: 1,  # TCP_KEEPINTVL
                     3: 3,  # TCP_KEEPCNT
                 }
-            )
+            
+            self.redis_client = redis.Redis(**redis_params)
             
             # Test connection
             await self.redis_client.ping()
