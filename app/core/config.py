@@ -94,6 +94,11 @@ class Settings(BaseSettings):
     # Processing Mode
     sync_message_processing: bool = Field(default=True, env="SYNC_MESSAGE_PROCESSING")  # Process messages immediately instead of queuing
     
+    # Provider Error Simulation (for testing resilience)
+    provider_error_rate: float = Field(default=0.1, env="PROVIDER_ERROR_RATE")  # Probability of provider errors (0.0 to 1.0)
+    provider_500_rate: float = Field(default=0.05, env="PROVIDER_500_RATE")  # Probability of 500 errors
+    provider_429_rate: float = Field(default=0.05, env="PROVIDER_429_RATE")  # Probability of 429 rate limit errors
+    
     @validator("database_url", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):

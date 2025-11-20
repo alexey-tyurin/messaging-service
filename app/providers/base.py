@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import asyncio
 import httpx
+import random
 from tenacity import retry, stop_after_attempt, wait_exponential
 from circuitbreaker import circuit
 
@@ -17,6 +18,35 @@ from app.core.config import settings
 
 
 logger = get_logger(__name__)
+
+
+class ProviderError(Exception):
+    """Base exception for provider errors."""
+    def __init__(self, message: str, status_code: int, provider: str):
+        self.message = message
+        self.status_code = status_code
+        self.provider = provider
+        super().__init__(self.message)
+
+
+class ProviderRateLimitError(ProviderError):
+    """Exception for 429 rate limit errors."""
+    def __init__(self, provider: str, retry_after: Optional[int] = None):
+        self.retry_after = retry_after or 60  # Default retry after 60 seconds
+        super().__init__(
+            f"Provider {provider} rate limit exceeded. Retry after {self.retry_after} seconds",
+            429,
+            provider
+        )
+
+
+class ProviderServerError(ProviderError):
+    """Exception for 500 server errors."""
+    def __init__(self, provider: str, details: Optional[str] = None):
+        message = f"Provider {provider} server error"
+        if details:
+            message += f": {details}"
+        super().__init__(message, 500, provider)
 
 
 class MessageProvider(ABC):
@@ -73,13 +103,17 @@ class TwilioProvider(MessageProvider):
         Send SMS/MMS through Twilio (MOCK).
         
         This is a mock implementation that returns hardcoded success responses.
-        No actual Twilio API calls are made.
+        No actual Twilio API calls are made. Simulates 500 and 429 errors based on configuration.
         
         Args:
             message_data: Message details (from, to, type, body, attachments)
             
         Returns:
             Mock provider response with provider_message_id, status, timestamp, cost
+            
+        Raises:
+            ProviderRateLimitError: When simulating 429 rate limit
+            ProviderServerError: When simulating 500 server error
         """
         try:
             with MetricsCollector.track_duration(
@@ -89,8 +123,34 @@ class TwilioProvider(MessageProvider):
                 # MOCK: Simulate network delay (no actual API call)
                 # In production, this would make actual API call
                 await asyncio.sleep(0.1)
-
-            # MOCK: Return hardcoded success response
+                
+                # MOCK: Simulate provider errors based on configuration
+                if settings.provider_error_rate > 0:
+                    error_roll = random.random()
+                    
+                    # Simulate 429 rate limit error
+                    if error_roll < settings.provider_429_rate:
+                        logger.warning(
+                            "Simulating 429 rate limit error from Twilio",
+                            provider=self.name.value
+                        )
+                        raise ProviderRateLimitError(
+                            provider=self.name.value,
+                            retry_after=random.randint(30, 120)
+                        )
+                    
+                    # Simulate 500 server error
+                    elif error_roll < (settings.provider_429_rate + settings.provider_500_rate):
+                        logger.warning(
+                            "Simulating 500 server error from Twilio",
+                            provider=self.name.value
+                        )
+                        raise ProviderServerError(
+                            provider=self.name.value,
+                            details="Internal service unavailable"
+                        )
+ 
+                # MOCK: Return hardcoded success response
                 response = {
                     "provider_message_id": f"twilio_{datetime.utcnow().timestamp()}",
                     "status": "sent",
@@ -113,6 +173,9 @@ class TwilioProvider(MessageProvider):
                 
                 return response
                 
+        except (ProviderRateLimitError, ProviderServerError):
+            # Re-raise provider errors for proper handling
+            raise
         except Exception as e:
             MetricsCollector.track_provider_error(
                 self.name.value,
@@ -218,18 +281,48 @@ class SendGridProvider(MessageProvider):
         Send email through SendGrid (MOCK).
         
         This is a mock implementation that returns hardcoded success responses.
-        No actual SendGrid API calls are made.
+        No actual SendGrid API calls are made. Simulates 500 and 429 errors based on configuration.
         
         Args:
             message_data: Message details (from, to, body, attachments)
             
         Returns:
             Mock provider response with provider_message_id, status, timestamp, cost
+            
+        Raises:
+            ProviderRateLimitError: When simulating 429 rate limit
+            ProviderServerError: When simulating 500 server error
         """
         try:
             with MetricsCollector.track_duration("email", self.name.value):
                 # MOCK: Simulate network delay (no actual API call)
                 await asyncio.sleep(0.15)
+                
+                # MOCK: Simulate provider errors based on configuration
+                if settings.provider_error_rate > 0:
+                    error_roll = random.random()
+                    
+                    # Simulate 429 rate limit error
+                    if error_roll < settings.provider_429_rate:
+                        logger.warning(
+                            "Simulating 429 rate limit error from SendGrid",
+                            provider=self.name.value
+                        )
+                        raise ProviderRateLimitError(
+                            provider=self.name.value,
+                            retry_after=random.randint(30, 120)
+                        )
+                    
+                    # Simulate 500 server error
+                    elif error_roll < (settings.provider_429_rate + settings.provider_500_rate):
+                        logger.warning(
+                            "Simulating 500 server error from SendGrid",
+                            provider=self.name.value
+                        )
+                        raise ProviderServerError(
+                            provider=self.name.value,
+                            details="Internal service unavailable"
+                        )
                 
                 # MOCK: Return hardcoded success response
                 response = {
@@ -254,6 +347,9 @@ class SendGridProvider(MessageProvider):
                 
                 return response
                 
+        except (ProviderRateLimitError, ProviderServerError):
+            # Re-raise provider errors for proper handling
+            raise
         except Exception as e:
             MetricsCollector.track_provider_error(
                 self.name.value,

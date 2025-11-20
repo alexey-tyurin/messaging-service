@@ -203,18 +203,56 @@ class MessageService:
                 return True
                 
             except Exception as e:
-                # Handle provider error
+                # Import provider exceptions
+                from app.providers.base import ProviderRateLimitError, ProviderServerError
+                
+                # Handle different error types with different strategies
+                retry_delay = settings.queue_retry_delay * message.retry_count
+                
+                if isinstance(e, ProviderRateLimitError):
+                    # 429 Rate Limit: Use provider's retry_after or exponential backoff
+                    retry_delay = max(e.retry_after, retry_delay * 2)
+                    error_type = "rate_limit_429"
+                    logger.warning(
+                        f"Provider rate limit hit (429), retry after {retry_delay}s",
+                        message_id=str(message.id),
+                        provider=provider.name,
+                        retry_after=e.retry_after
+                    )
+                elif isinstance(e, ProviderServerError):
+                    # 500 Server Error: Standard exponential backoff
+                    retry_delay = retry_delay * 1.5
+                    error_type = "server_error_500"
+                    logger.warning(
+                        f"Provider server error (500), retry after {retry_delay}s",
+                        message_id=str(message.id),
+                        provider=provider.name
+                    )
+                else:
+                    # Other errors: Standard retry
+                    error_type = "unknown_error"
+                    logger.warning(
+                        f"Provider error: {type(e).__name__}",
+                        message_id=str(message.id),
+                        provider=provider.name,
+                        error=str(e)
+                    )
+                
+                # Update message for retry
                 message.retry_count += 1
                 message.status = MessageStatus.RETRY
-                message.retry_after = datetime.utcnow() + timedelta(
-                    seconds=settings.queue_retry_delay * message.retry_count
-                )
+                message.retry_after = datetime.utcnow() + timedelta(seconds=retry_delay)
                 message.error_message = str(e)
                 
                 await self._create_message_event(
                     message.id,
                     EventType.RETRY,
-                    {"error": str(e), "retry_count": message.retry_count}
+                    {
+                        "error": str(e),
+                        "error_type": error_type,
+                        "retry_count": message.retry_count,
+                        "retry_delay": retry_delay
+                    }
                 )
                 
                 # Re-queue for retry
@@ -222,11 +260,12 @@ class MessageService:
                 
                 await self.db.commit()
                 
-                logger.warning(
-                    f"Message send failed, queued for retry",
+                logger.info(
+                    f"Message queued for retry",
                     message_id=str(message.id),
                     retry_count=message.retry_count,
-                    error=str(e)
+                    retry_delay=retry_delay,
+                    error_type=error_type
                 )
                 
                 return False
