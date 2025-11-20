@@ -42,44 +42,67 @@ A production-ready, distributed messaging service supporting SMS, MMS, Email, an
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.11+ with conda environment
 - Docker and Docker Compose
-- PostgreSQL 15+
-- Redis 7+
+- PostgreSQL 15+ (via Docker)
+- Redis 7+ (via Docker)
 
 ### Local Development Setup
 
-1. **Clone and setup:**
+1. **Activate your conda environment:**
 ```bash
-cd messaging-service
-make setup  # This will install dependencies and start services
+conda activate py311
 ```
 
-2. **Run migrations:**
+2. **Start Docker services (PostgreSQL & Redis):**
+```bash
+cd messaging-service
+docker compose up -d postgres redis
+```
+
+3. **Verify Docker services are running:**
+```bash
+docker compose ps
+# Should show postgres and redis as "Up (healthy)"
+```
+
+4. **Run database migrations:**
 ```bash
 make migrate
 ```
 
-3. **Start the service:**
+5. **Start the application:**
 ```bash
-make run
+# Using the conda Python directly
+/Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-4. **Run tests:**
+Or create an alias for convenience:
 ```bash
-make test
+# Add to ~/.zshrc or ~/.bashrc
+alias messaging-run="cd /path/to/messaging-service && /Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+```
+
+6. **Stop the application:**
+```bash
+make stop
+```
+
+7. **Restart the application:**
+```bash
+make restart
 ```
 
 The service will be available at:
 - API: http://localhost:8000
-- Documentation: http://localhost:8000/docs
+- Documentation: http://localhost:8000/api/v1/docs
 - Metrics: http://localhost:8000/metrics
 - Health: http://localhost:8000/health
 
-### Docker Development
+### Docker Development (Full Stack)
 
 ```bash
-# Start all services
+# Start all services (including app and worker containers)
 docker compose up -d
 
 # View logs
@@ -88,6 +111,33 @@ docker compose logs -f
 # Stop services
 docker compose down
 ```
+
+### Troubleshooting
+
+**Error: "Address already in use"**
+```bash
+make stop  # Kill all processes on port 8000
+```
+
+**Error: "PostgreSQL is not available"**
+```bash
+docker compose up -d postgres
+docker compose ps postgres  # Check status
+```
+
+**Error: "Redis connection failed"**
+```bash
+docker compose up -d redis
+docker compose ps redis  # Check status
+```
+
+**Error: "FastAPI not found"**
+```bash
+# Make sure you're in the correct conda environment
+conda activate py311
+```
+
+For more detailed troubleshooting, see [START_STOP.md](./START_STOP.md)
 
 ## 📡 API Endpoints
 

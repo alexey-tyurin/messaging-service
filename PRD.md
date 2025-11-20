@@ -638,7 +638,7 @@ According to @PRD.md, what's the proper way to handle retries?
 
 **Project**: Messaging Service  
 **Repository**: Internal GitHub  
-**Documentation**: This PRD + README.md + ARCHITECTURE.md  
+**Documentation**: This PRD + README.md + ARCHITECTURE.md + QUICK_START.md
 **Tech Stack Questions**: Reference this PRD section by section  
 
 ---
