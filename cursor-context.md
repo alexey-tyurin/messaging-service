@@ -192,9 +192,9 @@ make lint             # Check code quality
 
 ### Docker
 ```bash
-docker-compose up -d  # Start all services
-docker-compose logs   # View logs
-docker-compose ps     # Check status
+docker compose up -d  # Start all services
+docker compose logs   # View logs
+docker compose ps     # Check status
 make docker-restart   # Restart services
 ```
 
@@ -327,8 +327,8 @@ curl http://localhost:8000/ready
 curl http://localhost:8000/metrics | grep message
 
 # Check logs
-docker-compose logs -f app
-docker-compose logs -f worker
+docker compose logs -f app
+docker compose logs -f worker
 ```
 
 ---

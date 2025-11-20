@@ -5,7 +5,7 @@
 # Variables
 PYTHON := python3
 PIP := pip3
-DOCKER_COMPOSE := docker-compose
+DOCKER_COMPOSE := docker compose
 APP_NAME := messaging-service
 
 # Default target

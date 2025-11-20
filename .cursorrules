@@ -299,9 +299,9 @@ make test         # Run tests
 make lint         # Check code style
 
 # Docker
-docker-compose up      # Start all services
-docker-compose logs -f # View logs
-docker-compose down    # Stop services
+docker compose up      # Start all services
+docker compose logs -f # View logs
+docker compose down    # Stop services
 
 # Database
 make migrate      # Apply migrations

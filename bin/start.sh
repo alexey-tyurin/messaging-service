@@ -69,7 +69,7 @@ except:
         if [ $i -eq 30 ]; then
             echo -e "${RED}PostgreSQL is not available${NC}"
             echo "Please ensure PostgreSQL is running with:"
-            echo "  docker-compose up -d postgres"
+            echo "  docker compose up -d postgres"
             exit 1
         fi
         echo "Waiting for PostgreSQL... ($i/30)"
@@ -95,7 +95,7 @@ except:
         if [ $i -eq 30 ]; then
             echo -e "${RED}Redis is not available${NC}"
             echo "Please ensure Redis is running with:"
-            echo "  docker-compose up -d redis"
+            echo "  docker compose up -d redis"
             exit 1
         fi
         echo "Waiting for Redis... ($i/30)"
