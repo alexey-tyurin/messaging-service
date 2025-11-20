@@ -109,7 +109,7 @@ async def list_conversations(
     try:
         service = ConversationService(db)
         
-        conversations = await service.list_conversations(
+        conversations, total = await service.list_conversations(
             participant=participant,
             channel_type=channel_type,
             status=status,
@@ -132,12 +132,12 @@ async def list_conversations(
                 unread_count=conv.unread_count,
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
-                metadata=conv.metadata or {}
+                metadata=conv.meta_data or {}
             ))
         
         return ConversationListResponse(
             conversations=conversation_responses,
-            total=len(conversation_responses),  # In production, get actual total count
+            total=total,
             limit=limit,
             offset=offset
         )
@@ -300,7 +300,7 @@ async def search_conversations(
     try:
         service = ConversationService(db)
         
-        conversations = await service.search_conversations(
+        conversations, total = await service.search_conversations(
             query=request.query,
             limit=request.limit
         )
@@ -320,12 +320,12 @@ async def search_conversations(
                 unread_count=conv.unread_count,
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
-                metadata=conv.metadata or {}
+                metadata=conv.meta_data or {}
             ))
         
         return ConversationListResponse(
             conversations=conversation_responses,
-            total=len(conversation_responses),
+            total=total,
             limit=request.limit,
             offset=0
         )

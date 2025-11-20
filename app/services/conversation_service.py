@@ -87,7 +87,7 @@ class ConversationService:
         status: Optional[ConversationStatus] = None,
         limit: int = 50,
         offset: int = 0
-    ) -> List[Conversation]:
+    ) -> tuple[List[Conversation], int]:
         """
         List conversations with filters.
         
@@ -99,7 +99,7 @@ class ConversationService:
             offset: Skip results
             
         Returns:
-            List of conversations
+            Tuple of (list of conversations, total count)
         """
         try:
             query = select(Conversation)
@@ -118,7 +118,24 @@ class ConversationService:
             if status:
                 query = query.where(Conversation.status == status)
             
-            # Order by last message
+            # Get total count before pagination
+            count_query = select(func.count()).select_from(Conversation)
+            if participant:
+                count_query = count_query.where(
+                    or_(
+                        Conversation.participant_from == participant,
+                        Conversation.participant_to == participant
+                    )
+                )
+            if channel_type:
+                count_query = count_query.where(Conversation.channel_type == channel_type)
+            if status:
+                count_query = count_query.where(Conversation.status == status)
+            
+            count_result = await self.db.execute(count_query)
+            total = count_result.scalar() or 0
+            
+            # Order by last message and paginate
             query = query.order_by(desc(Conversation.last_message_at))
             query = query.limit(limit).offset(offset)
             
@@ -128,22 +145,22 @@ class ConversationService:
             # Update metrics
             if not offset:  # Only count on first page
                 for channel in MessageType:
-                    count_query = select(func.count()).select_from(Conversation)
-                    count_query = count_query.where(
+                    metrics_query = select(func.count()).select_from(Conversation)
+                    metrics_query = metrics_query.where(
                         and_(
                             Conversation.channel_type == channel,
                             Conversation.status == ConversationStatus.ACTIVE
                         )
                     )
-                    count_result = await self.db.execute(count_query)
-                    count = count_result.scalar()
+                    metrics_result = await self.db.execute(metrics_query)
+                    count = metrics_result.scalar()
                     MetricsCollector.update_conversation_count(channel.value, count)
             
-            return conversations
+            return conversations, total
             
         except Exception as e:
             logger.error(f"Failed to list conversations: {e}")
-            return []
+            return [], 0
     
     @trace_operation("update_conversation")
     async def update_conversation(
@@ -299,7 +316,7 @@ class ConversationService:
         self,
         query: str,
         limit: int = 20
-    ) -> List[Conversation]:
+    ) -> tuple[List[Conversation], int]:
         """
         Search conversations by participants or message content.
         
@@ -308,7 +325,7 @@ class ConversationService:
             limit: Max results
             
         Returns:
-            List of matching conversations
+            Tuple of (list of matching conversations, total count)
         """
         try:
             # Search by participants
@@ -339,11 +356,12 @@ class ConversationService:
                     additional_result = await self.db.execute(additional_query)
                     conversations.extend(additional_result.scalars().all())
             
-            return conversations[:limit]
+            final_conversations = conversations[:limit]
+            return final_conversations, len(final_conversations)
             
         except Exception as e:
             logger.error(f"Failed to search conversations: {e}")
-            return []
+            return [], 0
     
     @trace_operation("get_conversation_statistics")
     async def get_conversation_statistics(
