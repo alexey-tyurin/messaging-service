@@ -93,7 +93,7 @@ class Conversation(Base):
     unread_count = Column(Integer, default=0)
     
     # JSON metadata for extensibility
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     
     # Timestamps
     created_at = Column(
@@ -187,7 +187,7 @@ class Message(Base):
     error_message = Column(Text)
     
     # Metadata
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     headers = Column(JSON, default={})
     
     # Cost tracking (for future billing features)
@@ -257,7 +257,7 @@ class MessageEvent(Base):
     provider_timestamp = Column(DateTime(timezone=True))
     
     # Event metadata
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
     error_message = Column(Text)
     
     # Timestamp

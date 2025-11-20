@@ -55,7 +55,7 @@ async def get_conversation(
             unread_count=conversation.unread_count,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
-            metadata=conversation.metadata or {}
+            metadata=conversation.meta_data or {}
         )
         
         # Include messages if requested
@@ -77,7 +77,7 @@ async def get_conversation(
                     delivered_at=msg.delivered_at,
                     created_at=msg.created_at,
                     updated_at=msg.updated_at,
-                    metadata=msg.metadata or {}
+                    metadata=msg.meta_data or {}
                 )
                 for msg in conversation.messages
             ]
@@ -182,7 +182,7 @@ async def update_conversation(
             unread_count=conversation.unread_count,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
-            metadata=conversation.metadata or {}
+            metadata=conversation.meta_data or {}
         )
         
     except HTTPException:
@@ -248,7 +248,7 @@ async def archive_conversation(
             unread_count=conversation.unread_count,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
-            metadata=conversation.metadata or {}
+            metadata=conversation.meta_data or {}
         )
         
     except HTTPException:
@@ -408,7 +408,7 @@ async def merge_conversations(
             unread_count=conversation.unread_count,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
-            metadata=conversation.metadata or {}
+            metadata=conversation.meta_data or {}
         )
         
     except HTTPException:

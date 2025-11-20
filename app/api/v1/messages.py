@@ -58,7 +58,7 @@ async def send_message(
             delivered_at=message.delivered_at,
             created_at=message.created_at,
             updated_at=message.updated_at,
-            metadata=message.metadata or {}
+            metadata=message.meta_data or {}
         )
         
     except ValueError as e:
@@ -101,7 +101,7 @@ async def get_message(
             delivered_at=message.delivered_at,
             created_at=message.created_at,
             updated_at=message.updated_at,
-            metadata=message.metadata or {}
+            metadata=message.meta_data or {}
         )
         
     except HTTPException:
@@ -156,7 +156,7 @@ async def list_messages(
                 delivered_at=msg.delivered_at,
                 created_at=msg.created_at,
                 updated_at=msg.updated_at,
-                metadata=msg.metadata or {}
+                metadata=msg.meta_data or {}
             ))
         
         return MessageListResponse(
@@ -213,7 +213,7 @@ async def update_message_status(
             delivered_at=message.delivered_at,
             created_at=message.created_at,
             updated_at=message.updated_at,
-            metadata=message.metadata or {}
+            metadata=message.meta_data or {}
         )
         
     except HTTPException:
@@ -275,7 +275,7 @@ async def retry_message(
             delivered_at=message.delivered_at,
             created_at=message.created_at,
             updated_at=message.updated_at,
-            metadata=message.metadata or {}
+            metadata=message.meta_data or {}
         )
         
     except HTTPException:

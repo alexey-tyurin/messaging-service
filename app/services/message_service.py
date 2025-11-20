@@ -71,7 +71,7 @@ class MessageService:
                 to_address=message_data["to"],
                 body=message_data.get("body"),
                 attachments=message_data.get("attachments", []),
-                metadata=message_data.get("metadata", {})
+                meta_data=message_data.get("metadata", {})
             )
             
             self.db.add(message)
@@ -148,7 +148,7 @@ class MessageService:
             # Select provider
             provider = await ProviderSelector.select_provider(
                 message.message_type,
-                message.metadata
+                message.meta_data
             )
             
             # Update message status
@@ -279,7 +279,7 @@ class MessageService:
                 body=webhook_data.get("body"),
                 attachments=webhook_data.get("attachments", []),
                 delivered_at=datetime.utcnow(),
-                metadata=webhook_data.get("metadata", {})
+                meta_data=webhook_data.get("metadata", {})
             )
             
             self.db.add(message)
@@ -424,7 +424,7 @@ class MessageService:
                 message.failed_at = datetime.utcnow()
             
             if metadata:
-                message.metadata.update(metadata)
+                message.meta_data.update(metadata)
             
             await self._create_message_event(
                 message.id,
@@ -498,7 +498,7 @@ class MessageService:
                 participant_to=to_address,
                 channel_type=channel_type,
                 status=ConversationStatus.ACTIVE,
-                metadata={}
+                meta_data={}
             )
             self.db.add(conversation)
             await self.db.flush()
@@ -523,7 +523,7 @@ class MessageService:
             message_id=message_id,
             event_type=event_type,
             event_data=event_data,
-            metadata={}
+            meta_data={}
         )
         self.db.add(event)
     

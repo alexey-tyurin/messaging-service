@@ -99,11 +99,11 @@ class Settings(BaseSettings):
             return v
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
-            user=values.get("postgres_user"),
+            username=values.get("postgres_user"),
             password=values.get("postgres_password"),
             host=values.get("postgres_host"),
-            port=str(values.get("postgres_port")),
-            path=f"/{values.get('postgres_db') or ''}",
+            port=int(values.get("postgres_port", 5432)),
+            path=f"{values.get('postgres_db') or ''}",
         )
     
     @validator("redis_url", pre=True)
@@ -114,17 +114,17 @@ class Settings(BaseSettings):
         if password:
             return RedisDsn.build(
                 scheme="redis",
-                user="",
+                username="",
                 password=password,
                 host=values.get("redis_host"),
-                port=str(values.get("redis_port")),
-                path=f"/{values.get('redis_db') or 0}",
+                port=int(values.get("redis_port", 6379)),
+                path=f"{values.get('redis_db') or 0}",
             )
         return RedisDsn.build(
             scheme="redis",
             host=values.get("redis_host"),
-            port=str(values.get("redis_port")),
-            path=f"/{values.get('redis_db') or 0}",
+            port=int(values.get("redis_port", 6379)),
+            path=f"{values.get('redis_db') or 0}",
         )
     
     class Config:
