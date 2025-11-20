@@ -164,15 +164,17 @@ docker compose logs -f redis
 
 | Command | Description |
 |---------|-------------|
-| `make run` | Start the application |
+| `make run` | Start application (foreground - blocks terminal) |
+| `make run-bg` | Start application (background - frees terminal) ⭐ |
 | `make stop` | Stop all services |
-| `make restart` | Restart the application |
+| `make restart-app` | Restart application (background mode) |
+| `make app-status` | Check if application is running |
+| `make app-logs` | View application logs |
 | `make worker` | Start background worker |
 | `make test` | Run tests |
 | `make migrate` | Run database migrations |
 | `make docker-up` | Start Docker containers |
 | `make docker-down` | Stop Docker containers |
-| `make clean` | Clean generated files |
 
 ## 🔍 Checking Service Status
 

@@ -1,6 +1,6 @@
 # Makefile for Messaging Service
 
-.PHONY: help setup install run stop restart test clean docker-up docker-down docker-build migrate lint format
+.PHONY: help setup install run run-bg stop restart-app app-status app-logs test clean docker-up docker-down docker-build migrate lint format
 
 # Variables
 PYTHON := python3
@@ -11,21 +11,32 @@ APP_NAME := messaging-service
 # Default target
 help:
 	@echo "Available commands:"
+	@echo ""
+	@echo "Local Development:"
+	@echo "  run          - Run the application (foreground - blocks terminal)"
+	@echo "  run-bg       - Run the application in background (recommended)"
+	@echo "  stop         - Stop all running services"
+	@echo "  restart-app  - Restart the application in background"
+	@echo "  app-status   - Check if application is running"
+	@echo "  app-logs     - View application logs (for background mode)"
+	@echo "  worker       - Run the background worker"
+	@echo ""
+	@echo "Setup & Testing:"
 	@echo "  setup        - Set up the development environment"
 	@echo "  install      - Install Python dependencies"
-	@echo "  run          - Run the application locally"
-	@echo "  stop         - Stop all running services"
-	@echo "  restart      - Restart the application"
-	@echo "  worker       - Run the background worker"
 	@echo "  test         - Run tests"
 	@echo "  lint         - Run linting"
 	@echo "  format       - Format code with black"
 	@echo "  migrate      - Run database migrations"
 	@echo "  migration    - Create a new migration"
+	@echo ""
+	@echo "Docker:"
 	@echo "  docker-up    - Start Docker containers"
 	@echo "  docker-down  - Stop Docker containers"
 	@echo "  docker-build - Build Docker images"
-	@echo "  docker-logs  - View Docker logs"
+	@echo "  logs         - View Docker logs"
+	@echo ""
+	@echo "Other:"
 	@echo "  clean        - Clean up generated files"
 
 # Setup development environment
@@ -37,19 +48,62 @@ install:
 	$(PIP) install -r requirements.txt
 	$(PIP) install -r requirements-dev.txt 2>/dev/null || true
 
-# Run the application
+# Run the application (foreground - blocks terminal)
 run:
 	./bin/start.sh
+
+# Run the application in background (frees up terminal)
+run-bg:
+	@echo "Starting application in background..."
+	@mkdir -p logs
+	@nohup ./bin/start.sh > logs/app.log 2>&1 & echo $$! > .app.pid
+	@sleep 3
+	@if [ -f .app.pid ]; then \
+		PID=$$(cat .app.pid); \
+		if ps -p $$PID > /dev/null 2>&1; then \
+			echo "✓ Application started successfully in background (PID: $$PID)"; \
+			echo "  View logs: make app-logs"; \
+			echo "  Check status: make app-status"; \
+			echo "  Stop: make stop"; \
+		else \
+			echo "✗ Application failed to start. Check: tail logs/app.log"; \
+			cat logs/app.log 2>/dev/null || echo "No log file found"; \
+		fi \
+	fi
 
 # Stop all services
 stop:
 	./bin/stop.sh
+	@rm -f .app.pid 2>/dev/null || true
 
 # Restart the application
-restart: stop
+restart-app: stop
 	@echo "Waiting 2 seconds before restart..."
 	@sleep 2
-	$(MAKE) run
+	$(MAKE) run-bg
+
+# View application logs
+app-logs:
+	@if [ -f logs/app.log ]; then \
+		tail -f logs/app.log; \
+	else \
+		echo "No log file found. Start the app with: make run-bg"; \
+	fi
+
+# Check application status
+app-status:
+	@if [ -f .app.pid ]; then \
+		PID=$$(cat .app.pid); \
+		if ps -p $$PID > /dev/null 2>&1; then \
+			echo "✓ Application is running (PID: $$PID)"; \
+			lsof -i:8000 | grep LISTEN || true; \
+		else \
+			echo "✗ Application is not running"; \
+			rm -f .app.pid; \
+		fi \
+	else \
+		echo "✗ Application is not running"; \
+	fi
 
 # Run the background worker
 worker:
