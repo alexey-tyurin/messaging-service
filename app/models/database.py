@@ -75,9 +75,9 @@ class Conversation(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     participant_from = Column(String(255), nullable=False, index=True)
     participant_to = Column(String(255), nullable=False, index=True)
-    channel_type = Column(Enum(MessageType), nullable=False, index=True)
+    channel_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     status = Column(
-        Enum(ConversationStatus), 
+        Enum(ConversationStatus, values_callable=lambda x: [e.value for e in x]), 
         default=ConversationStatus.ACTIVE,
         nullable=False,
         index=True
@@ -151,18 +151,18 @@ class Message(Base):
     )
     
     # Provider information
-    provider = Column(Enum(Provider), nullable=False, index=True)
+    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     provider_message_id = Column(String(255), index=True)
     
     # Message details
-    direction = Column(Enum(MessageDirection), nullable=False, index=True)
+    direction = Column(Enum(MessageDirection, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     status = Column(
-        Enum(MessageStatus),
+        Enum(MessageStatus, values_callable=lambda x: [e.value for e in x]),
         default=MessageStatus.PENDING,
         nullable=False,
         index=True
     )
-    message_type = Column(Enum(MessageType), nullable=False, index=True)
+    message_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     
     # Content
     body = Column(Text)
@@ -245,11 +245,11 @@ class MessageEvent(Base):
         index=True
     )
     
-    event_type = Column(Enum(EventType), nullable=False, index=True)
+    event_type = Column(Enum(EventType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     event_data = Column(JSON, default={})
     
     # Provider tracking
-    provider = Column(Enum(Provider))
+    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]))
     provider_event_id = Column(String(255))
     provider_timestamp = Column(DateTime(timezone=True))
     
@@ -286,7 +286,7 @@ class WebhookLog(Base):
     __tablename__ = "webhook_logs"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    provider = Column(Enum(Provider), nullable=False, index=True)
+    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     webhook_id = Column(String(255), index=True)
     
     # Request information

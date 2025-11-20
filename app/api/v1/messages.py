@@ -129,7 +129,7 @@ async def list_messages(
     try:
         service = MessageService(db)
         
-        messages = await service.list_messages(
+        messages, total = await service.list_messages(
             conversation_id=str(conversation_id) if conversation_id else None,
             status=status,
             direction=direction,
@@ -161,7 +161,7 @@ async def list_messages(
         
         return MessageListResponse(
             messages=message_responses,
-            total=len(message_responses),  # In production, get actual total count
+            total=total,
             limit=limit,
             offset=offset
         )

@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     # Feature Flags
     enable_attachment_scanning: bool = Field(default=True, env="ENABLE_ATTACHMENT_SCANNING")
     
+    # Processing Mode
+    sync_message_processing: bool = Field(default=True, env="SYNC_MESSAGE_PROCESSING")  # Process messages immediately instead of queuing
+    
     @validator("database_url", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):

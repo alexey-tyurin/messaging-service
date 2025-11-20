@@ -54,6 +54,12 @@ class MessageService:
             # Determine message type
             message_type = self._determine_message_type(message_data)
             
+            # Select provider based on message type
+            provider = await ProviderSelector.select_provider(
+                message_type,
+                message_data.get("metadata", {})
+            )
+            
             # Get or create conversation
             conversation = await self._get_or_create_conversation(
                 from_address=message_data["from"],
@@ -61,9 +67,10 @@ class MessageService:
                 channel_type=message_type
             )
             
-            # Create message record
+            # Create message record with provider assigned
             message = Message(
                 conversation_id=conversation.id,
+                provider=Provider(provider.name),
                 direction=MessageDirection.OUTBOUND,
                 status=MessageStatus.PENDING,
                 message_type=message_type,
@@ -106,6 +113,13 @@ class MessageService:
                 message_id=str(message.id),
                 conversation_id=str(conversation.id)
             )
+            
+            # Process message immediately if sync processing is enabled
+            if settings.sync_message_processing:
+                logger.info(f"Processing message synchronously: {message.id}")
+                await self.process_outbound_message(str(message.id))
+                # Refresh message to get updated status
+                await self.db.refresh(message)
             
             return message
             
@@ -360,7 +374,7 @@ class MessageService:
         direction: Optional[MessageDirection] = None,
         limit: int = 50,
         offset: int = 0
-    ) -> List[Message]:
+    ) -> tuple[List[Message], int]:
         """
         List messages with filters.
         
@@ -372,7 +386,7 @@ class MessageService:
             offset: Skip results
             
         Returns:
-            List of messages
+            Tuple of (list of messages, total count)
         """
         try:
             query = select(Message).options(selectinload(Message.conversation))
@@ -384,15 +398,30 @@ class MessageService:
             if direction:
                 query = query.where(Message.direction == direction)
             
+            # Get total count before pagination
+            count_query = select(func.count()).select_from(Message)
+            if conversation_id:
+                count_query = count_query.where(Message.conversation_id == conversation_id)
+            if status:
+                count_query = count_query.where(Message.status == status)
+            if direction:
+                count_query = count_query.where(Message.direction == direction)
+            
+            count_result = await self.db.execute(count_query)
+            total = count_result.scalar() or 0
+            
+            # Get paginated messages
             query = query.order_by(Message.created_at.desc())
             query = query.limit(limit).offset(offset)
             
             result = await self.db.execute(query)
-            return result.scalars().all()
+            messages = result.scalars().all()
+            
+            return messages, total
             
         except Exception as e:
             logger.error(f"Failed to list messages: {e}")
-            return []
+            return [], 0
     
     async def update_message_status(
         self,

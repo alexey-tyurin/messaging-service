@@ -49,11 +49,16 @@ class MessageProvider(ABC):
 
 
 class TwilioProvider(MessageProvider):
-    """Twilio provider for SMS/MMS messages."""
+    """
+    Twilio provider for SMS/MMS messages.
+    
+    NOTE: This is a MOCK implementation that returns hardcoded responses.
+    No actual API calls are made to Twilio.
+    """
     
     def __init__(self):
         self.name = Provider.TWILIO
-        self.base_url = "https://api.twilio.com"
+        self.base_url = "https://api.twilio.com"  # Not actually used (mock)
         self.timeout = settings.sms_provider_timeout
         self.client = httpx.AsyncClient(timeout=self.timeout)
         
@@ -65,23 +70,27 @@ class TwilioProvider(MessageProvider):
     @trace_operation("twilio_send_message")
     async def send_message(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Send SMS/MMS through Twilio.
+        Send SMS/MMS through Twilio (MOCK).
+        
+        This is a mock implementation that returns hardcoded success responses.
+        No actual Twilio API calls are made.
         
         Args:
-            message_data: Message details
+            message_data: Message details (from, to, type, body, attachments)
             
         Returns:
-            Provider response
+            Mock provider response with provider_message_id, status, timestamp, cost
         """
         try:
             with MetricsCollector.track_duration(
                 message_data["type"],
                 self.name.value
             ):
-                # Mock Twilio API call
+                # MOCK: Simulate network delay (no actual API call)
                 # In production, this would make actual API call
-                await asyncio.sleep(0.1)  # Simulate network delay
-                
+                await asyncio.sleep(0.1)
+
+            # MOCK: Return hardcoded success response
                 response = {
                     "provider_message_id": f"twilio_{datetime.utcnow().timestamp()}",
                     "status": "sent",
@@ -97,7 +106,7 @@ class TwilioProvider(MessageProvider):
                 )
                 
                 logger.info(
-                    "Message sent via Twilio",
+                    "Message sent via Twilio (MOCK)",
                     provider=self.name.value,
                     message_id=response["provider_message_id"]
                 )
@@ -110,32 +119,45 @@ class TwilioProvider(MessageProvider):
                 type(e).__name__
             )
             logger.error(
-                "Failed to send message via Twilio",
+                "Failed to send message via Twilio (MOCK)",
                 error=str(e),
                 message_data=message_data
             )
             raise
     
     async def get_message_status(self, message_id: str) -> Dict[str, Any]:
-        """Get message status from Twilio."""
+        """
+        Get message status from Twilio (MOCK).
+        
+        Returns hardcoded delivered status without making actual API calls.
+        """
         try:
-            # Mock status check
+            # MOCK: Simulate API delay
             await asyncio.sleep(0.05)
+            # MOCK: Return hardcoded delivered status
             return {
                 "status": "delivered",
                 "delivered_at": datetime.utcnow().isoformat()
             }
         except Exception as e:
-            logger.error(f"Failed to get status from Twilio: {e}")
+            logger.error(f"Failed to get status from Twilio (MOCK): {e}")
             raise
     
     async def validate_webhook(self, headers: Dict, body: Any) -> bool:
-        """Validate Twilio webhook signature."""
-        # In production, validate X-Twilio-Signature
+        """
+        Validate Twilio webhook signature (MOCK).
+        
+        Always returns True. In production, would validate X-Twilio-Signature.
+        """
+        # MOCK: Always accept webhooks
         return True
     
     async def process_webhook(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process Twilio webhook data."""
+        """
+        Process Twilio webhook data (MOCK).
+        
+        Normalizes webhook data to internal format.
+        """
         try:
             # Normalize Twilio webhook to internal format
             return {
@@ -150,13 +172,17 @@ class TwilioProvider(MessageProvider):
                 "direction": "inbound"
             }
         except Exception as e:
-            logger.error(f"Failed to process Twilio webhook: {e}")
+            logger.error(f"Failed to process Twilio webhook (MOCK): {e}")
             raise
     
     async def health_check(self) -> bool:
-        """Check Twilio API health."""
+        """
+        Check Twilio API health (MOCK).
+        
+        Always returns True indicating provider is healthy.
+        """
         try:
-            # Mock health check
+            # MOCK: Simulate health check
             await asyncio.sleep(0.01)
             return True
         except Exception:
@@ -168,11 +194,16 @@ class TwilioProvider(MessageProvider):
 
 
 class SendGridProvider(MessageProvider):
-    """SendGrid provider for email messages."""
+    """
+    SendGrid provider for email messages.
+    
+    NOTE: This is a MOCK implementation that returns hardcoded responses.
+    No actual API calls are made to SendGrid.
+    """
     
     def __init__(self):
         self.name = Provider.SENDGRID
-        self.base_url = "https://api.sendgrid.com"
+        self.base_url = "https://api.sendgrid.com"  # Not actually used (mock)
         self.timeout = settings.email_provider_timeout
         self.client = httpx.AsyncClient(timeout=self.timeout)
     
@@ -184,19 +215,23 @@ class SendGridProvider(MessageProvider):
     @trace_operation("sendgrid_send_message")
     async def send_message(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Send email through SendGrid.
+        Send email through SendGrid (MOCK).
+        
+        This is a mock implementation that returns hardcoded success responses.
+        No actual SendGrid API calls are made.
         
         Args:
-            message_data: Message details
+            message_data: Message details (from, to, body, attachments)
             
         Returns:
-            Provider response
+            Mock provider response with provider_message_id, status, timestamp, cost
         """
         try:
             with MetricsCollector.track_duration("email", self.name.value):
-                # Mock SendGrid API call
-                await asyncio.sleep(0.15)  # Simulate network delay
+                # MOCK: Simulate network delay (no actual API call)
+                await asyncio.sleep(0.15)
                 
+                # MOCK: Return hardcoded success response
                 response = {
                     "provider_message_id": f"sendgrid_{datetime.utcnow().timestamp()}",
                     "status": "sent",
@@ -212,7 +247,7 @@ class SendGridProvider(MessageProvider):
                 )
                 
                 logger.info(
-                    "Email sent via SendGrid",
+                    "Email sent via SendGrid (MOCK)",
                     provider=self.name.value,
                     message_id=response["provider_message_id"]
                 )
@@ -225,32 +260,45 @@ class SendGridProvider(MessageProvider):
                 type(e).__name__
             )
             logger.error(
-                "Failed to send email via SendGrid",
+                "Failed to send email via SendGrid (MOCK)",
                 error=str(e),
                 message_data=message_data
             )
             raise
     
     async def get_message_status(self, message_id: str) -> Dict[str, Any]:
-        """Get message status from SendGrid."""
+        """
+        Get message status from SendGrid (MOCK).
+        
+        Returns hardcoded delivered status without making actual API calls.
+        """
         try:
-            # Mock status check
+            # MOCK: Simulate API delay
             await asyncio.sleep(0.05)
+            # MOCK: Return hardcoded delivered status
             return {
                 "status": "delivered",
                 "delivered_at": datetime.utcnow().isoformat()
             }
         except Exception as e:
-            logger.error(f"Failed to get status from SendGrid: {e}")
+            logger.error(f"Failed to get status from SendGrid (MOCK): {e}")
             raise
     
     async def validate_webhook(self, headers: Dict, body: Any) -> bool:
-        """Validate SendGrid webhook."""
-        # In production, validate webhook signature
+        """
+        Validate SendGrid webhook (MOCK).
+        
+        Always returns True. In production, would validate webhook signature.
+        """
+        # MOCK: Always accept webhooks
         return True
     
     async def process_webhook(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process SendGrid webhook data."""
+        """
+        Process SendGrid webhook data (MOCK).
+        
+        Normalizes webhook data to internal format.
+        """
         try:
             # Normalize SendGrid webhook to internal format
             return {
@@ -265,13 +313,17 @@ class SendGridProvider(MessageProvider):
                 "direction": "inbound"
             }
         except Exception as e:
-            logger.error(f"Failed to process SendGrid webhook: {e}")
+            logger.error(f"Failed to process SendGrid webhook (MOCK): {e}")
             raise
     
     async def health_check(self) -> bool:
-        """Check SendGrid API health."""
+        """
+        Check SendGrid API health (MOCK).
+        
+        Always returns True indicating provider is healthy.
+        """
         try:
-            # Mock health check
+            # MOCK: Simulate health check
             await asyncio.sleep(0.01)
             return True
         except Exception:
