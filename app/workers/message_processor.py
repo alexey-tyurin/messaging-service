@@ -53,10 +53,6 @@ class MessageProcessor:
             asyncio.create_task(self.update_metrics()),
         ]
         
-        # Add voice queue if enabled
-        if settings.enable_voice_calls:
-            self.tasks.append(asyncio.create_task(self.process_voice_queue()))
-        
         logger.info("Message processor started successfully")
         
         # Wait for all tasks
@@ -144,36 +140,7 @@ class MessageProcessor:
             except Exception as e:
                 logger.error(f"Error processing email queue: {e}")
                 await asyncio.sleep(5)
-    
-    @monitor_performance("process_voice_queue")
-    async def process_voice_queue(self):
-        """Process voice call/voicemail queue."""
-        queue_name = "message_queue:voice"
-        
-        while self.running:
-            try:
-                # Get messages from queue
-                messages = await redis_manager.dequeue_messages(
-                    queue_name,
-                    count=settings.queue_batch_size,
-                    block=1000
-                )
-                
-                if not messages:
-                    await asyncio.sleep(1)
-                    continue
-                
-                # Process messages
-                for msg_data in messages:
-                    await self._process_message(msg_data)
-                
-                # Update metrics
-                queue_depth = await redis_manager.redis_client.xlen(queue_name)
-                MetricsCollector.update_queue_depth(queue_name, queue_depth)
-                
-            except Exception as e:
-                logger.error(f"Error processing voice queue: {e}")
-                await asyncio.sleep(5)
+
     
     @monitor_performance("process_retry_queue")
     async def process_retry_queue(self):

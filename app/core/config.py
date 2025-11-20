@@ -89,8 +89,6 @@ class Settings(BaseSettings):
     webhook_timeout: int = Field(default=10, env="WEBHOOK_TIMEOUT")
     
     # Feature Flags
-    enable_voice_calls: bool = Field(default=False, env="ENABLE_VOICE_CALLS")
-    enable_voicemail: bool = Field(default=False, env="ENABLE_VOICEMAIL")
     enable_attachment_scanning: bool = Field(default=True, env="ENABLE_ATTACHMENT_SCANNING")
     
     @validator("database_url", pre=True)

@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Unified messaging API for SMS, MMS, Email, and Voice",
+    description="Unified messaging API for SMS, MMS, Email",
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     lifespan=lifespan

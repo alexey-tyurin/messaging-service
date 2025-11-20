@@ -113,40 +113,6 @@ async def sendgrid_webhook(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/voice")
-async def voice_webhook(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Handle voice provider webhooks.
-    
-    Processes call status updates and voicemail notifications.
-    Future extension point for voice features.
-    """
-    try:
-        # Get request data
-        headers = dict(request.headers)
-        body = await request.body()
-        
-        # Parse body
-        data = json.loads(body)
-        
-        # Process webhook
-        service = WebhookService(db)
-        result = await service.process_webhook(
-            provider="voice",
-            headers=headers,
-            body=data
-        )
-        
-        return {"status": "ok", "result": result}
-        
-    except Exception as e:
-        logger.error(f"Failed to process voice webhook: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @router.post("/generic/{provider}")
 async def generic_webhook(
     provider: str,

@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hatch-messaging-service"
 version = "1.0.0"
-description = "Distributed messaging service for SMS, MMS, Email, and Voice"
+description = "Distributed messaging service for SMS, MMS, and Email"
 authors = [
-    {name = "Hatch Engineering Team", email = "engineering@usehatchapp.com"}
+    {name = "Alexey Tyurin"}
 ]
 readme = "README.md"
 license = {text = "Proprietary"}

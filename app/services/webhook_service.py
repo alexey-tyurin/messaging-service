@@ -70,8 +70,7 @@ class WebhookService:
                 # Map provider name to message type for factory
                 provider_map = {
                     "twilio": MessageType.SMS,
-                    "sendgrid": MessageType.EMAIL,
-                    "voice": MessageType.VOICE_CALL
+                    "sendgrid": MessageType.EMAIL
                 }
                 message_type = provider_map.get(provider)
                 if not message_type:

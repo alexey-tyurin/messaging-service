@@ -13,8 +13,6 @@ class MessageType(str, Enum):
     SMS = "sms"
     MMS = "mms"
     EMAIL = "email"
-    VOICE_CALL = "voice_call"
-    VOICEMAIL = "voicemail"
 
 
 class MessageDirection(str, Enum):

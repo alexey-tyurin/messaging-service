@@ -282,47 +282,6 @@ class SendGridProvider(MessageProvider):
         await self.client.aclose()
 
 
-class VoiceProvider(MessageProvider):
-    """Voice provider for calls and voicemail (future extension)."""
-    
-    def __init__(self):
-        self.name = "voice_provider"
-        self.enabled = settings.enable_voice_calls
-    
-    async def send_message(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Initiate voice call."""
-        if not self.enabled:
-            raise NotImplementedError("Voice calls not enabled")
-        
-        # Placeholder for voice call implementation
-        return {
-            "provider_message_id": f"voice_{datetime.utcnow().timestamp()}",
-            "status": "initiated",
-            "call_duration": 0,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    
-    async def get_message_status(self, message_id: str) -> Dict[str, Any]:
-        """Get call status."""
-        return {
-            "status": "completed",
-            "call_duration": 120,
-            "recording_url": None
-        }
-    
-    async def validate_webhook(self, headers: Dict, body: Any) -> bool:
-        """Validate voice webhook."""
-        return True
-    
-    async def process_webhook(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process voice webhook."""
-        return data
-    
-    async def health_check(self) -> bool:
-        """Check voice provider health."""
-        return self.enabled
-
-
 class ProviderFactory:
     """Factory for creating message providers."""
     
@@ -348,9 +307,7 @@ class ProviderFactory:
         provider_map = {
             MessageType.SMS: "twilio",
             MessageType.MMS: "twilio",
-            MessageType.EMAIL: "sendgrid",
-            MessageType.VOICE_CALL: "voice",
-            MessageType.VOICEMAIL: "voice"
+            MessageType.EMAIL: "sendgrid"
         }
         
         provider_type = provider_map.get(message_type)
@@ -369,9 +326,6 @@ class ProviderFactory:
         # Register providers
         cls.register_provider("twilio", TwilioProvider())
         cls.register_provider("sendgrid", SendGridProvider())
-        
-        if settings.enable_voice_calls:
-            cls.register_provider("voice", VoiceProvider())
         
         logger.info("All providers initialized")
     

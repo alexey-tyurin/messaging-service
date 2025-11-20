@@ -289,7 +289,6 @@ SECRET_KEY
 ```
 RATE_LIMIT_ENABLED=true
 METRICS_ENABLED=true
-ENABLE_VOICE_CALLS=false
 ```
 
 ## 📚 Key Files Reference
