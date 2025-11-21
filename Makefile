@@ -22,14 +22,15 @@ help:
 	@echo "  worker       - Run the background worker"
 	@echo ""
 	@echo "Setup & Testing:"
-	@echo "  setup        - Set up the development environment"
-	@echo "  install      - Install Python dependencies"
-	@echo "  test         - Run tests"
-	@echo "  test-flow    - Run message flow tests (Redis queue integration)"
-	@echo "  lint         - Run linting"
-	@echo "  format       - Format code with black"
-	@echo "  migrate      - Run database migrations"
-	@echo "  migration    - Create a new migration"
+	@echo "  setup              - Set up the development environment"
+	@echo "  install            - Install Python dependencies"
+	@echo "  test               - Run tests"
+	@echo "  test-flow          - Run message flow tests (Redis queue integration)"
+	@echo "  verify-redis-queue - Verify Redis queue integration and async processing"
+	@echo "  lint               - Run linting"
+	@echo "  format             - Format code with black"
+	@echo "  migrate            - Run database migrations"
+	@echo "  migration          - Create a new migration"
 	@echo ""
 	@echo "Docker:"
 	@echo "  docker-up    - Start Docker containers"
@@ -117,6 +118,11 @@ test:
 # Run message flow tests (tests complete flow through Redis queues)
 test-flow:
 	./bin/test_flow.sh
+
+# Verify Redis queue integration
+verify-redis-queue:
+	@echo "Verifying Redis queue integration..."
+	$(PYTHON) ./bin/verify_redis_queue.py
 
 # Run unit tests
 test-unit:
