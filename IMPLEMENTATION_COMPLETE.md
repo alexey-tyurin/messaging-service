@@ -369,9 +369,6 @@ See [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md) for complete troublesho
 ### To Understand Usage
 → Read: [NEW_TEST_SCRIPT_GUIDE.md](./NEW_TEST_SCRIPT_GUIDE.md)
 
-### To Understand Implementation
-→ Read: [TEST_FLOW_SUMMARY.md](./TEST_FLOW_SUMMARY.md)
-
 ### To Troubleshoot Issues
 → Read: [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md)
 

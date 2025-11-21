@@ -324,7 +324,6 @@ Choose the right test for your needs:
 - **Complete Guide**: [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md)
 - **Example Output**: [bin/FLOW_TEST_EXAMPLE.md](./bin/FLOW_TEST_EXAMPLE.md)
 - **All Tests Guide**: [bin/README_TESTS.md](./bin/README_TESTS.md)
-- **Implementation**: [TEST_FLOW_SUMMARY.md](./TEST_FLOW_SUMMARY.md)
 
 ## ✨ Benefits
 
