@@ -37,7 +37,6 @@ def upgrade() -> None:
         sa.UniqueConstraint('participant_from', 'participant_to', 'channel_type', name='uq_conversation_participants')
     )
     op.create_index('idx_conversation_participants', 'conversations', ['participant_from', 'participant_to', 'channel_type'])
-    op.create_index('idx_conversation_updated', 'conversations', ['updated_at'])
     op.create_index('idx_conversation_last_message', 'conversations', ['last_message_at'])
     op.create_index(op.f('ix_conversations_channel_type'), 'conversations', ['channel_type'])
     op.create_index(op.f('ix_conversations_participant_from'), 'conversations', ['participant_from'])
@@ -75,18 +74,9 @@ def upgrade() -> None:
         sa.UniqueConstraint('provider', 'provider_message_id', name='uq_provider_message')
     )
     op.create_index('idx_message_conversation_created', 'messages', ['conversation_id', 'created_at'])
-    op.create_index('idx_message_status_created', 'messages', ['status', 'created_at'])
-    op.create_index('idx_message_provider_status', 'messages', ['provider', 'status'])
-    op.create_index('idx_message_direction_type', 'messages', ['direction', 'message_type'])
-    op.create_index(op.f('ix_messages_conversation_id'), 'messages', ['conversation_id'])
+    op.create_index('idx_message_status_retry', 'messages', ['status', 'retry_after'])
     op.create_index(op.f('ix_messages_direction'), 'messages', ['direction'])
-    op.create_index(op.f('ix_messages_from_address'), 'messages', ['from_address'])
-    op.create_index(op.f('ix_messages_message_type'), 'messages', ['message_type'])
-    op.create_index(op.f('ix_messages_provider'), 'messages', ['provider'])
-    op.create_index(op.f('ix_messages_provider_message_id'), 'messages', ['provider_message_id'])
-    op.create_index(op.f('ix_messages_sent_at'), 'messages', ['sent_at'])
     op.create_index(op.f('ix_messages_status'), 'messages', ['status'])
-    op.create_index(op.f('ix_messages_to_address'), 'messages', ['to_address'])
     
     # Create message_events table
     op.create_table('message_events',
@@ -104,10 +94,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('idx_event_message_created', 'message_events', ['message_id', 'created_at'])
-    op.create_index('idx_event_type_created', 'message_events', ['event_type', 'created_at'])
-    op.create_index('idx_event_provider', 'message_events', ['provider', 'provider_event_id'])
-    op.create_index(op.f('ix_message_events_event_type'), 'message_events', ['event_type'])
-    op.create_index(op.f('ix_message_events_message_id'), 'message_events', ['message_id'])
     
     # Create webhook_logs table
     op.create_table('webhook_logs',
@@ -125,10 +111,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('idx_webhook_provider_created', 'webhook_logs', ['provider', 'created_at'])
-    op.create_index('idx_webhook_processed', 'webhook_logs', ['processed', 'created_at'])
-    op.create_index(op.f('ix_webhook_logs_processed'), 'webhook_logs', ['processed'])
-    op.create_index(op.f('ix_webhook_logs_provider'), 'webhook_logs', ['provider'])
-    op.create_index(op.f('ix_webhook_logs_webhook_id'), 'webhook_logs', ['webhook_id'])
     
     # Create attachment_metadata table
     op.create_table('attachment_metadata',
@@ -164,14 +146,10 @@ def upgrade() -> None:
     )
     op.create_index('idx_rate_limit_client_endpoint', 'rate_limits', ['client_id', 'endpoint'])
     op.create_index('idx_rate_limit_window', 'rate_limits', ['window_end'])
-    op.create_index(op.f('ix_rate_limits_client_id'), 'rate_limits', ['client_id'])
-    op.create_index(op.f('ix_rate_limits_endpoint'), 'rate_limits', ['endpoint'])
 
 
 def downgrade() -> None:
     """Drop all tables."""
-    op.drop_index(op.f('ix_rate_limits_endpoint'), table_name='rate_limits')
-    op.drop_index(op.f('ix_rate_limits_client_id'), table_name='rate_limits')
     op.drop_index('idx_rate_limit_window', table_name='rate_limits')
     op.drop_index('idx_rate_limit_client_endpoint', table_name='rate_limits')
     op.drop_table('rate_limits')
@@ -179,32 +157,15 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_attachment_metadata_message_id'), table_name='attachment_metadata')
     op.drop_table('attachment_metadata')
     
-    op.drop_index(op.f('ix_webhook_logs_webhook_id'), table_name='webhook_logs')
-    op.drop_index(op.f('ix_webhook_logs_provider'), table_name='webhook_logs')
-    op.drop_index(op.f('ix_webhook_logs_processed'), table_name='webhook_logs')
-    op.drop_index('idx_webhook_processed', table_name='webhook_logs')
     op.drop_index('idx_webhook_provider_created', table_name='webhook_logs')
     op.drop_table('webhook_logs')
     
-    op.drop_index(op.f('ix_message_events_message_id'), table_name='message_events')
-    op.drop_index(op.f('ix_message_events_event_type'), table_name='message_events')
-    op.drop_index('idx_event_provider', table_name='message_events')
-    op.drop_index('idx_event_type_created', table_name='message_events')
     op.drop_index('idx_event_message_created', table_name='message_events')
     op.drop_table('message_events')
     
-    op.drop_index(op.f('ix_messages_to_address'), table_name='messages')
     op.drop_index(op.f('ix_messages_status'), table_name='messages')
-    op.drop_index(op.f('ix_messages_sent_at'), table_name='messages')
-    op.drop_index(op.f('ix_messages_provider_message_id'), table_name='messages')
-    op.drop_index(op.f('ix_messages_provider'), table_name='messages')
-    op.drop_index(op.f('ix_messages_message_type'), table_name='messages')
-    op.drop_index(op.f('ix_messages_from_address'), table_name='messages')
     op.drop_index(op.f('ix_messages_direction'), table_name='messages')
-    op.drop_index(op.f('ix_messages_conversation_id'), table_name='messages')
-    op.drop_index('idx_message_direction_type', table_name='messages')
-    op.drop_index('idx_message_provider_status', table_name='messages')
-    op.drop_index('idx_message_status_created', table_name='messages')
+    op.drop_index('idx_message_status_retry', table_name='messages')
     op.drop_index('idx_message_conversation_created', table_name='messages')
     op.drop_table('messages')
     
@@ -213,7 +174,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_conversations_participant_from'), table_name='conversations')
     op.drop_index(op.f('ix_conversations_channel_type'), table_name='conversations')
     op.drop_index('idx_conversation_last_message', table_name='conversations')
-    op.drop_index('idx_conversation_updated', table_name='conversations')
     op.drop_index('idx_conversation_participants', table_name='conversations')
     op.drop_table('conversations')
     

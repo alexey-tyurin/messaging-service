@@ -85,7 +85,7 @@ class Conversation(Base):
     
     # Conversation metadata
     title = Column(String(255))
-    last_message_at = Column(DateTime(timezone=True), index=True)
+    last_message_at = Column(DateTime(timezone=True))
     message_count = Column(Integer, default=0)
     unread_count = Column(Integer, default=0)
     
@@ -96,8 +96,7 @@ class Conversation(Base):
     created_at = Column(
         DateTime(timezone=True), 
         server_default=func.now(),
-        nullable=False,
-        index=True
+        nullable=False
     )
     updated_at = Column(
         DateTime(timezone=True),
@@ -114,7 +113,7 @@ class Conversation(Base):
         order_by="Message.created_at"
     )
     
-    # Indexes
+    # Indexes - optimized for API query patterns
     __table_args__ = (
         Index(
             "idx_conversation_participants",
@@ -122,7 +121,6 @@ class Conversation(Base):
             "participant_to",
             "channel_type"
         ),
-        Index("idx_conversation_updated", "updated_at"),
         Index("idx_conversation_last_message", "last_message_at"),
         UniqueConstraint(
             "participant_from",
@@ -146,13 +144,12 @@ class Message(Base):
     conversation_id = Column(
         UUID(as_uuid=True),
         ForeignKey("conversations.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
+        nullable=False
     )
     
     # Provider information
-    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
-    provider_message_id = Column(String(255), index=True)
+    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    provider_message_id = Column(String(255))
     
     # Message details
     direction = Column(Enum(MessageDirection, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
@@ -162,15 +159,15 @@ class Message(Base):
         nullable=False,
         index=True
     )
-    message_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
+    message_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     
     # Content
     body = Column(Text)
     attachments = Column(JSON, default=[])
     
     # Participant information (denormalized for query performance)
-    from_address = Column(String(255), nullable=False, index=True)
-    to_address = Column(String(255), nullable=False, index=True)
+    from_address = Column(String(255), nullable=False)
+    to_address = Column(String(255), nullable=False)
     
     # Retry information
     retry_count = Column(Integer, default=0)
@@ -178,7 +175,7 @@ class Message(Base):
     retry_after = Column(DateTime(timezone=True))
     
     # Tracking
-    sent_at = Column(DateTime(timezone=True), index=True)
+    sent_at = Column(DateTime(timezone=True))
     delivered_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(Text)
@@ -194,8 +191,7 @@ class Message(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
-        index=True
+        nullable=False
     )
     updated_at = Column(
         DateTime(timezone=True),
@@ -213,12 +209,10 @@ class Message(Base):
         order_by="MessageEvent.created_at"
     )
     
-    # Indexes
+    # Indexes - optimized for API query patterns
     __table_args__ = (
         Index("idx_message_conversation_created", "conversation_id", "created_at"),
-        Index("idx_message_status_created", "status", "created_at"),
-        Index("idx_message_provider_status", "provider", "status"),
-        Index("idx_message_direction_type", "direction", "message_type"),
+        Index("idx_message_status_retry", "status", "retry_after"),
         UniqueConstraint(
             "provider",
             "provider_message_id",
@@ -241,11 +235,10 @@ class MessageEvent(Base):
     message_id = Column(
         UUID(as_uuid=True),
         ForeignKey("messages.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
+        nullable=False
     )
     
-    event_type = Column(Enum(EventType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
+    event_type = Column(Enum(EventType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     event_data = Column(JSON, default={})
     
     # Provider tracking
@@ -261,18 +254,15 @@ class MessageEvent(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
-        index=True
+        nullable=False
     )
     
     # Relationships
     message = relationship("Message", back_populates="events")
     
-    # Indexes
+    # Indexes - optimized for loading events by message
     __table_args__ = (
         Index("idx_event_message_created", "message_id", "created_at"),
-        Index("idx_event_type_created", "event_type", "created_at"),
-        Index("idx_event_provider", "provider", "provider_event_id"),
     )
     
     def __repr__(self):
@@ -286,8 +276,8 @@ class WebhookLog(Base):
     __tablename__ = "webhook_logs"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
-    webhook_id = Column(String(255), index=True)
+    provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    webhook_id = Column(String(255))
     
     # Request information
     endpoint = Column(String(255))
@@ -296,7 +286,7 @@ class WebhookLog(Base):
     body = Column(JSON)
     
     # Processing information
-    processed = Column(Boolean, default=False, index=True)
+    processed = Column(Boolean, default=False)
     processed_at = Column(DateTime(timezone=True))
     error_message = Column(Text)
     
@@ -304,14 +294,12 @@ class WebhookLog(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
-        index=True
+        nullable=False
     )
     
-    # Indexes
+    # Indexes - optimized for auditing and debugging
     __table_args__ = (
         Index("idx_webhook_provider_created", "provider", "created_at"),
-        Index("idx_webhook_processed", "processed", "created_at"),
     )
     
     def __repr__(self):
@@ -365,8 +353,8 @@ class RateLimitEntry(Base):
     __tablename__ = "rate_limits"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    client_id = Column(String(255), nullable=False, index=True)
-    endpoint = Column(String(255), nullable=False, index=True)
+    client_id = Column(String(255), nullable=False)
+    endpoint = Column(String(255), nullable=False)
     
     # Rate limit tracking
     request_count = Column(Integer, default=1)
@@ -386,7 +374,7 @@ class RateLimitEntry(Base):
         nullable=False
     )
     
-    # Indexes
+    # Indexes for future rate limiting
     __table_args__ = (
         Index("idx_rate_limit_client_endpoint", "client_id", "endpoint"),
         Index("idx_rate_limit_window", "window_end"),
