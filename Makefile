@@ -25,6 +25,7 @@ help:
 	@echo "  setup        - Set up the development environment"
 	@echo "  install      - Install Python dependencies"
 	@echo "  test         - Run tests"
+	@echo "  test-flow    - Run message flow tests (Redis queue integration)"
 	@echo "  lint         - Run linting"
 	@echo "  format       - Format code with black"
 	@echo "  migrate      - Run database migrations"
@@ -112,6 +113,10 @@ worker:
 # Run tests
 test:
 	./bin/test.sh
+
+# Run message flow tests (tests complete flow through Redis queues)
+test-flow:
+	./bin/test_flow.sh
 
 # Run unit tests
 test-unit:

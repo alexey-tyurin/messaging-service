@@ -227,6 +227,17 @@ RATE_LIMIT_PERIOD=60
 
 ## 🧪 Testing
 
+### Message Flow Tests (Complete Integration)
+Test the complete 8-step message flow through Redis queues:
+```bash
+make test-flow  # Tests SMS/MMS/Email flow + webhooks
+```
+
+This validates:
+- API → Database → Redis Queue → Worker → Provider → Status Updates
+
+See [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md) for details.
+
 ### Unit Tests
 ```bash
 pytest tests/unit -v --cov=app
