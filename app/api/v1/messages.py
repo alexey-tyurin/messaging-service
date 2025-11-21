@@ -80,7 +80,9 @@ async def get_message(
     """
     try:
         service = MessageService(db)
-        message = await service.get_message(str(message_id))
+        # Don't load relationships - we don't need them for the response model
+        # This allows full cache utilization without DB query
+        message = await service.get_message(str(message_id), include_relationships=False)
         
         if not message:
             raise HTTPException(status_code=404, detail="Message not found")
@@ -194,8 +196,8 @@ async def update_message_status(
         if not success:
             raise HTTPException(status_code=404, detail="Message not found")
         
-        # Get updated message
-        message = await service.get_message(str(message_id))
+        # Get updated message - no relationships needed for response
+        message = await service.get_message(str(message_id), include_relationships=False)
         
         return MessageResponse(
             id=str(message.id),
@@ -236,8 +238,8 @@ async def retry_message(
     try:
         service = MessageService(db)
         
-        # Get message
-        message = await service.get_message(str(message_id))
+        # Get message - no relationships needed
+        message = await service.get_message(str(message_id), include_relationships=False)
         if not message:
             raise HTTPException(status_code=404, detail="Message not found")
         
@@ -256,8 +258,8 @@ async def retry_message(
         # Process message
         success = await service.process_outbound_message(str(message_id))
         
-        # Get updated message
-        message = await service.get_message(str(message_id))
+        # Get updated message - no relationships needed for response
+        message = await service.get_message(str(message_id), include_relationships=False)
         
         return MessageResponse(
             id=str(message.id),

@@ -4,6 +4,7 @@ Conversation service for managing message conversations.
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import uuid
 from sqlalchemy import select, and_, or_, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -55,17 +56,34 @@ class ConversationService:
                 logger.debug(f"Conversation cache hit: {conversation_id}")
                 MetricsCollector.track_cache_operation("get", True)
                 
-                # For cached data, we still fetch from DB to get the full object with relationships
-                # The cache serves as a quick existence check and basic data
-                # We could optimize further by only fetching from DB if include_messages=True
-                query = select(Conversation).where(Conversation.id == conversation_id)
-                
-                if include_messages:
+                # If messages are not needed, reconstruct from cache without DB query
+                if not include_messages:
+                    # Create a detached Conversation object from cached data
+                    from datetime import datetime
+                    
+                    conversation = Conversation(
+                        id=uuid.UUID(cached_data["id"]),
+                        participant_from=cached_data["participant_from"],
+                        participant_to=cached_data["participant_to"],
+                        channel_type=MessageType(cached_data["channel_type"]),
+                        status=ConversationStatus(cached_data["status"]),
+                        message_count=cached_data["message_count"],
+                        unread_count=cached_data["unread_count"],
+                        title=cached_data.get("title"),
+                        last_message_at=datetime.fromisoformat(cached_data["last_message_at"]) if cached_data.get("last_message_at") else None,
+                        created_at=datetime.fromisoformat(cached_data["created_at"]) if cached_data.get("created_at") else None,
+                        updated_at=datetime.fromisoformat(cached_data["updated_at"]) if cached_data.get("updated_at") else None,
+                        meta_data=cached_data.get("meta_data", {})
+                    )
+                    logger.debug(f"Returned conversation from cache without DB query: {conversation_id}")
+                    return conversation
+                else:
+                    # Messages needed - query DB with relationships
+                    logger.debug(f"Cache hit but loading messages from DB: {conversation_id}")
+                    query = select(Conversation).where(Conversation.id == conversation_id)
                     query = query.options(selectinload(Conversation.messages))
-                
-                result = await self.db.execute(query)
-                conversation = result.scalar_one_or_none()
-                return conversation
+                    result = await self.db.execute(query)
+                    return result.scalar_one_or_none()
             
             # Cache miss - fetch from database
             logger.debug(f"Conversation cache miss: {conversation_id}")
@@ -103,7 +121,7 @@ class ConversationService:
             return conversation
             
         except Exception as e:
-            logger.error(f"Failed to get conversation: {e}")
+            logger.error(f"Failed to get conversation: {e}", exc_info=True)
             return None
     
     @trace_operation("list_conversations")

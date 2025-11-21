@@ -405,12 +405,17 @@ class MessageService:
             logger.error(f"Failed to receive message: {e}", webhook_data=webhook_data)
             raise
     
-    async def get_message(self, message_id: str) -> Optional[Message]:
+    async def get_message(
+        self, 
+        message_id: str,
+        include_relationships: bool = True
+    ) -> Optional[Message]:
         """
         Get message by ID.
         
         Args:
             message_id: Message ID
+            include_relationships: If False, skip loading conversation and events (faster with cache)
             
         Returns:
             Message object or None
@@ -424,28 +429,54 @@ class MessageService:
                 logger.debug(f"Message cache hit: {message_id}")
                 MetricsCollector.track_cache_operation("get", True)
                 
-                # Reconstruct Message object from cached data
-                # Note: For cached data, we return a simplified version without relationships
-                # If full object with relationships is needed, fetch from DB
-                result = await self.db.execute(
-                    select(Message)
-                    .options(selectinload(Message.conversation))
-                    .options(selectinload(Message.events))
-                    .where(Message.id == message_id)
-                )
-                message = result.scalar_one_or_none()
-                return message
+                # If relationships are not needed, reconstruct from cache without DB query
+                if not include_relationships:
+                    # Create a detached Message object from cached data
+                    # Parse datetime strings back to datetime objects
+                    from datetime import datetime
+                    
+                    message = Message(
+                        id=uuid.UUID(cached_data["id"]),
+                        conversation_id=uuid.UUID(cached_data["conversation_id"]),
+                        provider=Provider(cached_data["provider"]) if cached_data.get("provider") else None,
+                        provider_message_id=cached_data.get("provider_message_id"),
+                        direction=MessageDirection(cached_data["direction"]),
+                        status=MessageStatus(cached_data["status"]),
+                        message_type=MessageType(cached_data["message_type"]),
+                        from_address=cached_data["from_address"],
+                        to_address=cached_data["to_address"],
+                        body=cached_data.get("body"),
+                        attachments=cached_data.get("attachments", []),
+                        sent_at=datetime.fromisoformat(cached_data["sent_at"]) if cached_data.get("sent_at") else None,
+                        delivered_at=datetime.fromisoformat(cached_data["delivered_at"]) if cached_data.get("delivered_at") else None,
+                        created_at=datetime.fromisoformat(cached_data["created_at"]) if cached_data.get("created_at") else None,
+                        updated_at=datetime.fromisoformat(cached_data["updated_at"]) if cached_data.get("updated_at") else None,
+                        meta_data=cached_data.get("meta_data", {})
+                    )
+                    logger.debug(f"Returned message from cache without DB query: {message_id}")
+                    return message
+                else:
+                    # Relationships needed - query DB but data exists (faster query)
+                    logger.debug(f"Cache hit but loading relationships from DB: {message_id}")
+                    result = await self.db.execute(
+                        select(Message)
+                        .options(selectinload(Message.conversation))
+                        .options(selectinload(Message.events))
+                        .where(Message.id == message_id)
+                    )
+                    return result.scalar_one_or_none()
             
             # Cache miss - fetch from database
             logger.debug(f"Message cache miss: {message_id}")
             MetricsCollector.track_cache_operation("get", False)
             
-            result = await self.db.execute(
-                select(Message)
-                .options(selectinload(Message.conversation))
-                .options(selectinload(Message.events))
-                .where(Message.id == message_id)
-            )
+            query = select(Message).where(Message.id == message_id)
+            
+            if include_relationships:
+                query = query.options(selectinload(Message.conversation))
+                query = query.options(selectinload(Message.events))
+            
+            result = await self.db.execute(query)
             message = result.scalar_one_or_none()
             
             if message:
@@ -476,7 +507,7 @@ class MessageService:
             return message
             
         except Exception as e:
-            logger.error(f"Failed to get message: {e}")
+            logger.error(f"Failed to get message: {e}", exc_info=True)
             return None
     
     async def list_messages(
