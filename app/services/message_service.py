@@ -100,6 +100,10 @@ class MessageService:
             
             await self.db.commit()
             
+            # Invalidate conversation cache after update
+            await redis_manager.delete(f"conversation:{conversation.id}")
+            logger.debug(f"Invalidated conversation cache: {conversation.id}")
+            
             # Track metrics
             MetricsCollector.track_message(
                 direction="outbound",
@@ -157,6 +161,11 @@ class MessageService:
                     {"reason": "max_retries"}
                 )
                 await self.db.commit()
+                
+                # Invalidate message cache after failure
+                await redis_manager.delete(f"message:{message.id}")
+                logger.debug(f"Invalidated message cache after failure: {message.id}")
+                
                 return False
             
             # Select provider
@@ -193,6 +202,10 @@ class MessageService:
                 )
                 
                 await self.db.commit()
+                
+                # Invalidate message cache after status update
+                await redis_manager.delete(f"message:{message.id}")
+                logger.debug(f"Invalidated message cache: {message.id}")
                 
                 logger.info(
                     "Message sent successfully",
@@ -259,6 +272,10 @@ class MessageService:
                 await self._queue_message_for_sending(message)
                 
                 await self.db.commit()
+                
+                # Invalidate message cache after retry update
+                await redis_manager.delete(f"message:{message.id}")
+                logger.debug(f"Invalidated message cache after retry: {message.id}")
                 
                 logger.info(
                     f"Message queued for retry",
@@ -352,6 +369,10 @@ class MessageService:
             
             await self.db.commit()
             
+            # Invalidate conversation cache after update
+            await redis_manager.delete(f"conversation:{conversation.id}")
+            logger.debug(f"Invalidated conversation cache: {conversation.id}")
+            
             # Publish to real-time channel
             await redis_manager.publish(
                 f"conversation:{conversation.id}",
@@ -395,13 +416,65 @@ class MessageService:
             Message object or None
         """
         try:
+            # Check Redis cache first
+            cache_key = f"message:{message_id}"
+            cached_data = await redis_manager.get(cache_key)
+            
+            if cached_data:
+                logger.debug(f"Message cache hit: {message_id}")
+                MetricsCollector.track_cache_operation("get", True)
+                
+                # Reconstruct Message object from cached data
+                # Note: For cached data, we return a simplified version without relationships
+                # If full object with relationships is needed, fetch from DB
+                result = await self.db.execute(
+                    select(Message)
+                    .options(selectinload(Message.conversation))
+                    .options(selectinload(Message.events))
+                    .where(Message.id == message_id)
+                )
+                message = result.scalar_one_or_none()
+                return message
+            
+            # Cache miss - fetch from database
+            logger.debug(f"Message cache miss: {message_id}")
+            MetricsCollector.track_cache_operation("get", False)
+            
             result = await self.db.execute(
                 select(Message)
                 .options(selectinload(Message.conversation))
                 .options(selectinload(Message.events))
                 .where(Message.id == message_id)
             )
-            return result.scalar_one_or_none()
+            message = result.scalar_one_or_none()
+            
+            if message:
+                # Cache the message data
+                cache_data = {
+                    "id": str(message.id),
+                    "conversation_id": str(message.conversation_id),
+                    "provider": message.provider.value if message.provider else None,
+                    "provider_message_id": message.provider_message_id,
+                    "direction": message.direction.value,
+                    "status": message.status.value,
+                    "message_type": message.message_type.value,
+                    "from_address": message.from_address,
+                    "to_address": message.to_address,
+                    "body": message.body,
+                    "attachments": message.attachments or [],
+                    "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+                    "delivered_at": message.delivered_at.isoformat() if message.delivered_at else None,
+                    "created_at": message.created_at.isoformat() if message.created_at else None,
+                    "updated_at": message.updated_at.isoformat() if message.updated_at else None,
+                    "meta_data": message.meta_data or {}
+                }
+                
+                await redis_manager.set(cache_key, cache_data, ttl=300)  # 5 minutes TTL
+                MetricsCollector.track_cache_operation("set", True)
+                logger.debug(f"Cached message: {message_id}")
+            
+            return message
+            
         except Exception as e:
             logger.error(f"Failed to get message: {e}")
             return None
@@ -501,6 +574,11 @@ class MessageService:
             )
             
             await self.db.commit()
+            
+            # Invalidate cache after update
+            await redis_manager.delete(f"message:{message_id}")
+            logger.debug(f"Invalidated message cache: {message_id}")
+            
             return True
             
         except Exception as e:

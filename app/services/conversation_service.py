@@ -47,6 +47,30 @@ class ConversationService:
             Conversation object or None
         """
         try:
+            # Check Redis cache first
+            cache_key = f"conversation:{conversation_id}"
+            cached_data = await redis_manager.get(cache_key)
+            
+            if cached_data:
+                logger.debug(f"Conversation cache hit: {conversation_id}")
+                MetricsCollector.track_cache_operation("get", True)
+                
+                # For cached data, we still fetch from DB to get the full object with relationships
+                # The cache serves as a quick existence check and basic data
+                # We could optimize further by only fetching from DB if include_messages=True
+                query = select(Conversation).where(Conversation.id == conversation_id)
+                
+                if include_messages:
+                    query = query.options(selectinload(Conversation.messages))
+                
+                result = await self.db.execute(query)
+                conversation = result.scalar_one_or_none()
+                return conversation
+            
+            # Cache miss - fetch from database
+            logger.debug(f"Conversation cache miss: {conversation_id}")
+            MetricsCollector.track_cache_operation("get", False)
+            
             query = select(Conversation).where(Conversation.id == conversation_id)
             
             if include_messages:
@@ -57,21 +81,24 @@ class ConversationService:
             
             if conversation:
                 # Cache conversation metadata
-                await redis_manager.set(
-                    f"conversation:{conversation_id}",
-                    {
-                        "id": str(conversation.id),
-                        "participant_from": conversation.participant_from,
-                        "participant_to": conversation.participant_to,
-                        "channel_type": conversation.channel_type.value,
-                        "status": conversation.status.value,
-                        "message_count": conversation.message_count,
-                        "unread_count": conversation.unread_count
-                    },
-                    ttl=300  # 5 minutes
-                )
+                cache_data = {
+                    "id": str(conversation.id),
+                    "participant_from": conversation.participant_from,
+                    "participant_to": conversation.participant_to,
+                    "channel_type": conversation.channel_type.value,
+                    "status": conversation.status.value,
+                    "message_count": conversation.message_count,
+                    "unread_count": conversation.unread_count,
+                    "title": conversation.title,
+                    "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+                    "created_at": conversation.created_at.isoformat() if conversation.created_at else None,
+                    "updated_at": conversation.updated_at.isoformat() if conversation.updated_at else None,
+                    "meta_data": conversation.meta_data or {}
+                }
                 
+                await redis_manager.set(cache_key, cache_data, ttl=300)  # 5 minutes
                 MetricsCollector.track_cache_operation("set", True)
+                logger.debug(f"Cached conversation: {conversation_id}")
             
             return conversation
             
@@ -230,6 +257,10 @@ class ConversationService:
             conversation.updated_at = datetime.utcnow()
             
             await self.db.commit()
+            
+            # Invalidate cache after update
+            await redis_manager.delete(f"conversation:{conversation_id}")
+            logger.debug(f"Invalidated conversation cache: {conversation_id}")
             
             # Publish event
             await redis_manager.publish(
