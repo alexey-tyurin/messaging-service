@@ -139,26 +139,21 @@ Testing Webhook Flow...
    - Comparison matrix
    - When to use which test
 
-6. **`TEST_FLOW_SUMMARY.md`** (300 lines)
-   - Implementation details
-   - Technical architecture
-   - Performance metrics
-
-7. **`NEW_TEST_SCRIPT_GUIDE.md`** (This file)
+6. **`NEW_TEST_SCRIPT_GUIDE.md`** (This file)
    - Quick start guide
    - User-friendly overview
 
 ### Updated Files
 
-8. **`Makefile`**
+7. **`Makefile`**
    - Added `test-flow` command
    - Updated help text
 
-9. **`requirements-dev.txt`**
+8. **`requirements-dev.txt`**
    - Added `httpx` (HTTP client)
    - Added `rich` (terminal UI)
 
-10. **`QUICK_START.md`**
+9. **`QUICK_START.md`**
     - Added message flow testing section
     - Link to documentation
 
