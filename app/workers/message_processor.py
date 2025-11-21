@@ -258,11 +258,12 @@ class MessageProcessor:
                         MetricsCollector.update_conversation_count(channel_type.value, count)
                 
                 # Update database pool metrics
+                from app.core.observability import db_connection_pool
                 if hasattr(db_manager.engine.pool, 'size'):
-                    MetricsCollector.db_connection_pool.labels(metric_type="active").set(
+                    db_connection_pool.labels(metric_type="active").set(
                         db_manager.engine.pool.checkedout()
                     )
-                    MetricsCollector.db_connection_pool.labels(metric_type="idle").set(
+                    db_connection_pool.labels(metric_type="idle").set(
                         db_manager.engine.pool.size() - db_manager.engine.pool.checkedout()
                     )
                 

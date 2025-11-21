@@ -248,9 +248,12 @@ class RedisManager:
             result = []
             for stream_name, stream_messages in messages:
                 for message_id, data in stream_messages:
-                    message_data = json.loads(data[b"data"])
-                    message_data["_id"] = message_id
-                    result.append(message_data)
+                    # Handle both bytes and string keys (depends on decode_responses setting)
+                    data_value = data.get("data") or data.get(b"data")
+                    if data_value:
+                        message_data = json.loads(data_value)
+                        message_data["_id"] = message_id
+                        result.append(message_data)
             
             return result
             

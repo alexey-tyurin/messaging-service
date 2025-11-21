@@ -265,10 +265,10 @@ class MessageFlowTester:
             if response.status_code == 200:
                 data = response.json()
                 console.print(f"  ✓ Message found in database", style="green")
-                console.print(f"  From: {data['from_address']}")
-                console.print(f"  To: {data['to_address']}")
-                console.print(f"  Type: {data['message_type']}")
-                console.print(f"  Created: {data['created_at']}")
+                console.print(f"  From: {data.get('from', data.get('from_address', 'N/A'))}")
+                console.print(f"  To: {data.get('to', data.get('to_address', 'N/A'))}")
+                console.print(f"  Type: {data.get('type', data.get('message_type', 'N/A'))}")
+                console.print(f"  Created: {data.get('created_at', 'N/A')}")
                 
                 return {
                     "success": True,
@@ -459,7 +459,8 @@ class MessageFlowTester:
             
             if response.status_code == 200:
                 console.print(f"  ✓ Twilio webhook processed", style="green")
-                console.print(f"  Response: {response.json()}")
+                # Twilio webhook returns XML, not JSON
+                console.print(f"  Response: {response.text[:100]}")
             else:
                 console.print(f"  ✗ Twilio webhook failed: {response.status_code}", style="red")
                 
