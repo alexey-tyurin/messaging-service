@@ -20,6 +20,7 @@ from app.db.redis import init_redis, close_redis, redis_manager
 from app.providers.base import ProviderFactory
 from app.api.v1 import messages, conversations, webhooks, health
 from app.api.v1.models import ErrorResponse
+from app.api import legacy_routes
 
 
 logger = get_logger(__name__)
@@ -226,6 +227,11 @@ app.include_router(
     prefix="",
     tags=["health"]
 )
+
+# Include legacy API routers for backward compatibility
+app.include_router(legacy_routes.messages_router)
+app.include_router(legacy_routes.webhooks_router)
+app.include_router(legacy_routes.conversations_router)
 
 
 # Root endpoint
