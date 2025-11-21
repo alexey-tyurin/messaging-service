@@ -56,7 +56,7 @@ All cached entries have a **5-minute (300 seconds)** TTL to ensure data freshnes
 #### `get_message()` Method
 - **Before**: Direct database query
 - **After**: 
-  - Added `include_relationships` parameter (default: True)
+  - Added `include_relationships` parameter (default: False)
   - Check Redis cache first
   - On cache hit without relationships: **Return directly from cache (NO DB QUERY)**
   - On cache hit with relationships: Query DB only for conversation and events

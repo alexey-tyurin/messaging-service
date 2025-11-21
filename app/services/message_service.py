@@ -408,7 +408,7 @@ class MessageService:
     async def get_message(
         self, 
         message_id: str,
-        include_relationships: bool = True
+        include_relationships: bool = False
     ) -> Optional[Message]:
         """
         Get message by ID.
