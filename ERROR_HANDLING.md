@@ -55,7 +55,7 @@ ProviderServerError(provider="sendgrid", details="Internal service unavailable")
 Control error simulation rates via environment variables:
 
 ```bash
-# Enable error simulation (default: 0.1 = 10%)
+# Enable error simulation (default: 0. To simulate errors set it to 0.1 = 10%)
 export PROVIDER_ERROR_RATE=0.1
 
 # Probability of 500 errors (default: 0.05 = 5%)
