@@ -26,15 +26,25 @@ class DatabaseManager:
         
     def init_db(self):
         """Initialize database engine and session factory."""
+        # Build engine kwargs, excluding pool parameters for SQLite
+        engine_kwargs = {
+            "echo": settings.debug,
+        }
+        
+        # Only add pool parameters for non-SQLite databases
+        if not str(settings.database_url).startswith("sqlite"):
+            engine_kwargs.update({
+                "pool_size": settings.db_pool_size,
+                "max_overflow": settings.db_max_overflow,
+                "pool_timeout": settings.db_pool_timeout,
+                "pool_pre_ping": True,  # Verify connections before using
+                "pool_recycle": 3600,  # Recycle connections after 1 hour
+            })
+        
         # Create async engine with connection pooling
         self.engine = create_async_engine(
             str(settings.database_url),
-            echo=settings.debug,
-            pool_size=settings.db_pool_size,
-            max_overflow=settings.db_max_overflow,
-            pool_timeout=settings.db_pool_timeout,
-            pool_pre_ping=True,  # Verify connections before using
-            pool_recycle=3600,  # Recycle connections after 1 hour
+            **engine_kwargs
         )
         
         # Create async session factory

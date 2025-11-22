@@ -107,8 +107,8 @@ addopts = """
     --cov-fail-under=80
     --maxfail=3
     --tb=short
-    --asyncio-mode=auto
 """
+asyncio_mode = "auto"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",

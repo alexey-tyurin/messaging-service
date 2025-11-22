@@ -51,6 +51,7 @@ class WebhookService:
         Returns:
             Processing result
         """
+        webhook_log = None
         try:
             # Log webhook
             webhook_log = await self._log_webhook(provider, headers, body)
@@ -115,13 +116,18 @@ class WebhookService:
             logger.error(
                 f"Failed to process webhook: {e}",
                 provider=provider,
-                body=body
+                body=body,
+                exc_info=True
             )
             
-            # Update webhook log with error
+            # Update webhook log with error if it was created
             if webhook_log:
-                webhook_log.error_message = str(e)
-                await self.db.commit()
+                try:
+                    webhook_log.error_message = str(e)
+                    await self.db.commit()
+                except Exception as commit_error:
+                    logger.error(f"Failed to update webhook log: {commit_error}")
+                    await self.db.rollback()
             
             raise
     

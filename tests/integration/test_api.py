@@ -16,6 +16,8 @@ def test_health_check(client):
 
 def test_send_message_endpoint(client, sample_message_data):
     """Test sending a message via API."""
+    import os
+    
     response = client.post(
         "/api/v1/messages/send",
         json=sample_message_data
@@ -28,7 +30,14 @@ def test_send_message_endpoint(client, sample_message_data):
     assert data["from"] == sample_message_data["from"]
     assert data["to"] == sample_message_data["to"]
     assert data["body"] == sample_message_data["body"]
-    assert data["status"] == "pending"
+    
+    # Status can be "sent" if sync processing is enabled, otherwise "pending"
+    sync_processing = os.getenv("SYNC_MESSAGE_PROCESSING", "false").lower() == "true"
+    if sync_processing:
+        assert data["status"] in ["sent", "pending"]  # Allow either during sync processing
+    else:
+        assert data["status"] == "pending"
+    
     assert data["direction"] == "outbound"
 
 

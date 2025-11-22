@@ -91,9 +91,6 @@ class MessageService:
                 {"source": "api"}
             )
             
-            # Queue message for sending
-            await self._queue_message_for_sending(message)
-            
             # Update conversation
             conversation.last_message_at = message.created_at
             conversation.message_count += 1
@@ -112,18 +109,25 @@ class MessageService:
                 provider="unknown"
             )
             
-            logger.info(
-                "Message created and queued",
-                message_id=str(message.id),
-                conversation_id=str(conversation.id)
-            )
-            
             # Process message immediately if sync processing is enabled
             if settings.sync_message_processing:
                 logger.info(f"Processing message synchronously: {message.id}")
                 await self.process_outbound_message(str(message.id))
                 # Refresh message to get updated status
                 await self.db.refresh(message)
+                logger.info(
+                    "Message processed synchronously",
+                    message_id=str(message.id),
+                    conversation_id=str(conversation.id)
+                )
+            else:
+                # Queue message for async processing
+                await self._queue_message_for_sending(message)
+                logger.info(
+                    "Message created and queued",
+                    message_id=str(message.id),
+                    conversation_id=str(conversation.id)
+                )
             
             return message
             

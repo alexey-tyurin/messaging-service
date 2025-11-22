@@ -79,6 +79,9 @@ class RedisManager:
         Returns:
             Cached value or None
         """
+        if not self.redis_client:
+            logger.warning("Redis not initialized, skipping get operation")
+            return None
         try:
             value = await self.redis_client.get(key)
             if value:
@@ -105,6 +108,9 @@ class RedisManager:
         Returns:
             True if successful
         """
+        if not self.redis_client:
+            logger.warning("Redis not initialized, skipping set operation")
+            return False
         try:
             serialized = json.dumps(value)
             if ttl:
@@ -112,7 +118,7 @@ class RedisManager:
             else:
                 await self.redis_client.set(key, serialized)
             return True
-        except (RedisError, json.JSONEncodeError) as e:
+        except (RedisError, TypeError, ValueError) as e:
             logger.error(f"Error setting cache key {key}: {e}")
             return False
     
@@ -126,6 +132,9 @@ class RedisManager:
         Returns:
             True if deleted
         """
+        if not self.redis_client:
+            logger.warning("Redis not initialized, skipping delete operation")
+            return False
         try:
             result = await self.redis_client.delete(key)
             return result > 0
@@ -216,7 +225,7 @@ class RedisManager:
             flat_message = {"data": json.dumps(message)}
             message_id = await self.redis_client.xadd(queue, flat_message)
             return message_id
-        except (RedisError, json.JSONEncodeError) as e:
+        except (RedisError, TypeError, ValueError) as e:
             logger.error(f"Error enqueuing message to {queue}: {e}")
             raise
     
@@ -310,10 +319,13 @@ class RedisManager:
         Returns:
             Number of subscribers that received the message
         """
+        if not self.redis_client:
+            logger.warning("Redis not initialized, skipping publish operation")
+            return 0
         try:
             serialized = json.dumps(message)
             return await self.redis_client.publish(channel, serialized)
-        except (RedisError, json.JSONEncodeError) as e:
+        except (RedisError, TypeError, ValueError) as e:
             logger.error(f"Error publishing to channel {channel}: {e}")
             return 0
     

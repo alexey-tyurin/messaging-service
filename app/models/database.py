@@ -5,9 +5,10 @@ Defines the core entities: Conversation, Message, MessageEvent, and related mode
 
 from sqlalchemy import (
     Column, String, DateTime, ForeignKey, Text, JSON, Enum, Index, 
-    UniqueConstraint, CheckConstraint, Boolean, Integer, Float
+    UniqueConstraint, CheckConstraint, Boolean, Integer, Float, TypeDecorator
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.types import CHAR
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 import enum
@@ -15,6 +16,43 @@ import uuid
 
 
 Base = declarative_base()
+
+
+# UUID type compatible with both PostgreSQL and SQLite
+class UUID(TypeDecorator):
+    """Platform-independent UUID type.
+    
+    Uses PostgreSQL's UUID type if available, otherwise uses
+    CHAR(36), storing UUIDs as strings.
+    """
+    impl = CHAR
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+    
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == "postgresql":
+            return str(value)
+        else:
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            else:
+                return str(uuid.UUID(value))
+    
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            if isinstance(value, uuid.UUID):
+                return value
+            else:
+                return uuid.UUID(value)
 
 
 class MessageType(str, enum.Enum):
@@ -72,7 +110,7 @@ class Conversation(Base):
     """
     __tablename__ = "conversations"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     participant_from = Column(String(255), nullable=False, index=True)
     participant_to = Column(String(255), nullable=False, index=True)
     channel_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
@@ -140,9 +178,9 @@ class Message(Base):
     """
     __tablename__ = "messages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     conversation_id = Column(
-        UUID(as_uuid=True),
+        UUID,
         ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False
     )
@@ -231,9 +269,9 @@ class MessageEvent(Base):
     """
     __tablename__ = "message_events"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     message_id = Column(
-        UUID(as_uuid=True),
+        UUID,
         ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=False
     )
@@ -275,7 +313,7 @@ class WebhookLog(Base):
     """
     __tablename__ = "webhook_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     provider = Column(Enum(Provider, values_callable=lambda x: [e.value for e in x]), nullable=False)
     webhook_id = Column(String(255))
     
@@ -312,9 +350,9 @@ class AttachmentMetadata(Base):
     """
     __tablename__ = "attachment_metadata"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     message_id = Column(
-        UUID(as_uuid=True),
+        UUID,
         ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=False,
         index=True
@@ -352,7 +390,7 @@ class RateLimitEntry(Base):
     """
     __tablename__ = "rate_limits"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     client_id = Column(String(255), nullable=False)
     endpoint = Column(String(255), nullable=False)
     
