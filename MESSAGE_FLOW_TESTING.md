@@ -4,7 +4,15 @@ This guide explains how to test the complete message flow through the messaging 
 
 ## Overview
 
-The message flow test script validates the complete 8-step message processing flow as described in the architecture:
+The message flow test script validates the complete 8-step message processing flow as described in the architecture.
+
+**Note**: The system uses **asynchronous processing by default** (`SYNC_MESSAGE_PROCESSING=false`), which means:
+- Messages are queued to Redis
+- Background worker processes messages from queue
+- This is the production-ready configuration
+- **Worker must be running** for tests to pass
+
+### Complete Flow Tested
 
 1. **Client sends message via REST API** - HTTP POST to `/api/v1/messages/send`
 2. **Message validated and stored in PostgreSQL** - Validation and database persistence
@@ -19,18 +27,20 @@ The message flow test script validates the complete 8-step message processing fl
 
 ### Prerequisites
 
-Make sure all services are running:
+The system is configured for async processing by default. All services must be running:
 
 ```bash
 # Start Docker services (PostgreSQL and Redis)
 docker compose up -d postgres redis
 
-# Start the API server
+# Start the API server (uses async mode by default)
 make run-bg
 
-# Start the background worker (IMPORTANT for full flow testing)
+# Start the background worker (REQUIRED - messages won't process without it!)
 make worker
 ```
+
+**Important**: The background worker is **required** for message processing in async mode (the default).
 
 ### Run the Test
 
@@ -183,10 +193,17 @@ At the end, a summary table shows all test results:
 Note: Worker might not be running
 ```
 
-**Solution**: Start the worker:
+**Cause**: The worker is required for async processing (default mode)
+
+**Solution**: Start the worker in a separate terminal:
 ```bash
 make worker
+
+# Or if using Python directly:
+python -m app.workers.message_processor
 ```
+
+**Why this happens**: The system uses async mode by default, which requires the worker to process messages from Redis queues.
 
 ### API Not Running
 

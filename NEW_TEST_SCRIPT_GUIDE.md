@@ -4,6 +4,12 @@
 
 A comprehensive test script has been created that validates the complete message flow through Redis queues, exactly as described in QUICK_START.md.
 
+**System Configuration**: The messaging service uses **async processing by default** (`SYNC_MESSAGE_PROCESSING=false`), which means:
+- Messages are queued to Redis for processing
+- Background worker processes messages from queues
+- This is production-ready and follows best practices
+- **Worker must be running** for messages to be processed
+
 ## 🚀 Quick Start
 
 ### Run the Test
@@ -12,7 +18,7 @@ A comprehensive test script has been created that validates the complete message
 # Make sure all services are running
 docker compose up -d postgres redis
 make run-bg
-make worker  # IMPORTANT - needed for full flow testing!
+make worker  # REQUIRED - the worker processes messages in async mode (default)!
 
 # Run the message flow test
 make test-flow
@@ -273,9 +279,16 @@ Add to your pipeline:
 - Message stuck in "pending" status
 - Queue length doesn't decrease
 
+**Why this happens:** 
+The system uses async mode by default, which requires the worker to process messages from Redis queues.
+
 **Solution:**
 ```bash
+# Start the worker in a separate terminal
 make worker
+
+# Or with Python directly:
+python -m app.workers.message_processor
 ```
 
 ### Other Issues

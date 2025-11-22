@@ -83,14 +83,28 @@ Or create an alias for convenience:
 alias messaging-run="cd /path/to/messaging-service && /Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"
 ```
 
-6. **Stop the application:**
+6. **Start the background worker (REQUIRED for message processing):**
+
+**Important**: The system uses async processing by default. Messages will stay in "pending" status until the worker processes them.
+
 ```bash
-make stop
+# In a separate terminal window
+conda activate py311
+cd messaging-service
+make worker
+
+# Or directly:
+python -m app.workers.message_processor
 ```
 
-7. **Restart the application:**
+8. **Stop the application:**
 ```bash
-make restart
+make stop  # Stops API and worker
+```
+
+9. **Restart the application:**
+```bash
+make restart  # Restarts both API and worker
 ```
 
 The service will be available at:
@@ -227,9 +241,25 @@ RATE_LIMIT_PERIOD=60
 
 ## 🧪 Testing
 
+### Processing Mode
+
+The system uses **asynchronous processing by default** (`SYNC_MESSAGE_PROCESSING=false`):
+- Messages are queued to Redis
+- Background worker processes messages from queues
+- Production-ready configuration
+- **Worker must be running** for message processing
+
+See [SYNC_VS_ASYNC_PROCESSING.md](./SYNC_VS_ASYNC_PROCESSING.md) for details.
+
 ### Message Flow Tests (Complete Integration)
+
 Test the complete 8-step message flow through Redis queues:
+
 ```bash
+# Ensure worker is running first!
+make worker  # Run in separate terminal
+
+# Then run the flow test
 make test-flow  # Tests SMS/MMS/Email flow + webhooks
 ```
 
@@ -279,15 +309,19 @@ locust -f tests/load/locustfile.py --host=http://localhost:8080
 
 ## 🏗️ System Design
 
-### Message Flow
+### Message Flow (Async Mode - Default)
+
 1. Client sends message via REST API
-2. Message validated and stored in PostgreSQL
-3. Queued in Redis for async processing
-4. Worker picks up message from queue
-5. Provider selected based on message type
-6. Message sent through provider API
-7. Status updated and events recorded
-8. Webhooks processed for delivery confirmations
+2. Message validated and stored in PostgreSQL (status: pending)
+3. Message queued in Redis for async processing
+4. API returns immediately with pending status
+5. Worker picks up message from queue
+6. Provider selected based on message type
+7. Message sent through provider API
+8. Status updated and events recorded (status: sending → sent → delivered)
+9. Webhooks processed for delivery confirmations
+
+**Note**: The background worker must be running for messages to be processed (`make worker`).
 
 ### Scaling Strategy
 - **Horizontal scaling** of API servers behind load balancer

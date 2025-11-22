@@ -6,17 +6,18 @@ This guide explains how to verify that the messaging service properly integrates
 
 The messaging service supports two processing modes:
 
-### 1. **Synchronous Processing** (Default - Not Recommended for Production)
-- Messages are processed immediately in the API request
-- No Redis queue involved
-- Controlled by `SYNC_MESSAGE_PROCESSING=true`
-- **Current Default**: `False` in `app/core/config.py`
-
-### 2. **Asynchronous Processing** (Recommended for Production)
+### 1. **Asynchronous Processing** (Current Default - Recommended for Production)
 - Messages are queued to Redis
 - Background worker processes messages from queue
 - Better scalability and resilience
 - Controlled by `SYNC_MESSAGE_PROCESSING=false`
+- **Current Default**: `False` in `app/core/config.py` (line 95)
+
+### 2. **Synchronous Processing** (Not Recommended for Production)
+- Messages are processed immediately in the API request
+- Redis queue is bypassed (though messages are still added)
+- Controlled by `SYNC_MESSAGE_PROCESSING=true`
+- Useful only for debugging
 
 ## Architecture Flow
 
@@ -143,39 +144,33 @@ Each queue processor:
 
 ## Verification Steps
 
-### Step 1: Check Current Configuration
+### Step 1: Verify Default Configuration
+
+The system is already configured for async processing by default:
 
 ```bash
-# Check if SYNC_MESSAGE_PROCESSING is set
-echo $SYNC_MESSAGE_PROCESSING
+# Check current setting (optional)
+python3 -c "from app.core.config import settings; print(f'Async mode enabled: {not settings.sync_message_processing}')"
 
-# If not set or set to 'true', messages are processed synchronously
+# Should output: "Async mode enabled: True"
 ```
 
-### Step 2: Enable Async Processing
+### Step 2: Start Services
 
-```bash
-# Set environment variable
-export SYNC_MESSAGE_PROCESSING=false
-
-# Or add to .env file
-echo "SYNC_MESSAGE_PROCESSING=false" >> .env
-```
-
-### Step 3: Start Services
+No configuration changes needed - async mode is the default!
 
 ```bash
 # Start Docker services
 docker compose up -d postgres redis
 
-# Start API with async processing
+# Start API (async mode is default)
 make run
 
-# In another terminal, start worker
+# In another terminal, start worker (required for async mode)
 make worker
 ```
 
-### Step 4: Run Verification Script
+### Step 3: Run Verification Script
 
 ```bash
 # Run automated verification
@@ -197,10 +192,10 @@ python3 ./bin/verify_redis_queue.py
 ✓ API is healthy
 
 ═══════════════════════════════════════════════════════════════════
-         Step 1: Verify Sync Processing Configuration
+         Step 1: Verify Processing Configuration
 ═══════════════════════════════════════════════════════════════════
 
-✓ SYNC_MESSAGE_PROCESSING is set to False
+✓ Async Processing Enabled (SYNC_MESSAGE_PROCESSING=False)
 
 ═══════════════════════════════════════════════════════════════════
               Step 2: Test Message Queuing to Redis
@@ -239,9 +234,9 @@ python3 ./bin/verify_redis_queue.py
 ...
 
 Test Summary
-✓ PASS - Sync Processing Disabled
+✓ PASS - Async Processing Enabled (Default)
 ✓ PASS - Message Queued to Redis
-✓ PASS - Async Processing Mode
+✓ PASS - Message Status: Pending (Async Mode)
 ✓ PASS - Worker Processed Message
 ✓ PASS - Webhook Integration
 ✓ PASS - Queue Operations
@@ -312,11 +307,12 @@ curl http://localhost:8080/api/v1/messages/$MESSAGE_ID | jq '.status'
 
 **Symptom**: Queue length doesn't increase after sending message
 
-**Cause**: `SYNC_MESSAGE_PROCESSING=true` (synchronous mode)
+**Cause**: `SYNC_MESSAGE_PROCESSING=true` (synchronous mode enabled)
 
-**Solution**:
+**Solution**: The default is async mode. If you changed it, remove the override:
 ```bash
-export SYNC_MESSAGE_PROCESSING=false
+unset SYNC_MESSAGE_PROCESSING
+# Or remove from .env file
 # Restart API server
 ```
 
@@ -344,18 +340,22 @@ python -m app.workers.message_processor
 2. Redis not running: Run `docker compose up -d redis`
 3. Configuration error: Check `.env` file
 
-### Issue: Messages Processed Too Quickly
+### Issue: Messages Processed Immediately
 
-**Symptom**: Messages show as 'sent' immediately even with async mode
+**Symptom**: Messages show as 'sent' immediately (not 'pending')
 
-**Cause**: Worker is running AND `SYNC_MESSAGE_PROCESSING=true`
+**Cause**: `SYNC_MESSAGE_PROCESSING=true` is set (overriding the default)
 
-**Explanation**: When sync mode is enabled, messages are:
-1. Added to queue (by `_queue_message_for_sending`)
-2. Processed immediately in API (by sync processing code)
-3. Worker may also process them (duplicate processing!)
+**Explanation**: When sync mode is explicitly enabled:
+1. Messages are added to queue (by `_queue_message_for_sending`)
+2. Messages are processed immediately in API (by sync processing code)
+3. Worker may also process them (potential duplicate processing!)
 
-**Solution**: Set `SYNC_MESSAGE_PROCESSING=false` to avoid duplicate processing
+**Solution**: Use the default async mode:
+```bash
+unset SYNC_MESSAGE_PROCESSING
+# Restart API server
+```
 
 ## Performance Comparison
 
@@ -380,12 +380,13 @@ python -m app.workers.message_processor
 
 ## Production Recommendations
 
-1. **Always use async mode** (`SYNC_MESSAGE_PROCESSING=false`)
-2. **Run multiple workers** for high throughput
-3. **Monitor queue depth** - alerts if queue grows too large
-4. **Set up worker health checks** - restart if crashed
-5. **Use Redis persistence** - messages survive restarts
-6. **Configure retries** properly for provider errors
+1. **Use the default async mode** (already configured - `SYNC_MESSAGE_PROCESSING=false`)
+2. **Always run the background worker** - required for message processing
+3. **Run multiple workers** for high throughput and redundancy
+4. **Monitor queue depth** - set alerts if queue grows too large
+5. **Set up worker health checks** - auto-restart if crashed
+6. **Use Redis persistence** - messages survive restarts
+7. **Configure retries** properly for provider errors
 
 ## Related Documentation
 
@@ -398,22 +399,27 @@ python -m app.workers.message_processor
 The messaging service queue integration works as follows:
 
 1. **Messages are ALWAYS added to Redis queue** (`_queue_message_for_sending`)
-2. **Sync mode (`SYNC_MESSAGE_PROCESSING=true`)**: 
-   - Messages are processed immediately by API
-   - Queue is bypassed (but message is still added)
-   - **This is the current default**
-3. **Async mode (`SYNC_MESSAGE_PROCESSING=false`)**:
+
+2. **Async mode (`SYNC_MESSAGE_PROCESSING=false`)** - **DEFAULT**:
    - Messages wait in queue for worker
    - Worker processes from queue
-   - Better for production
+   - Production-ready configuration
+   - **This is the current default**
+
+3. **Sync mode (`SYNC_MESSAGE_PROCESSING=true`)**:
+   - Messages are processed immediately by API
+   - Queue is effectively bypassed (though message is still added)
+   - Not recommended for production
+   - Useful only for debugging
 
 4. **Webhooks**: Currently processed synchronously (not via queue)
    - Webhook endpoints process immediately
-   - Could be changed to queue-based if needed
+   - This is correct - webhook providers expect immediate responses
+   - Could be changed to queue-based if heavy processing is needed
 
-To verify proper async operation, use the verification script:
+To verify async operation (default behavior), use the verification script:
 ```bash
-export SYNC_MESSAGE_PROCESSING=false
+# No configuration needed - async is the default
 make verify-redis-queue
 ```
 
