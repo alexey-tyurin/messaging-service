@@ -20,7 +20,7 @@ make stop
 The API server needs to be restarted to pick up the new default:
 
 ```bash
-make restart-app
+make run-bg
 ```
 
 **Wait for it to start** (about 3-5 seconds), then verify it's running:
@@ -35,8 +35,6 @@ curl http://localhost:8080/health
 **In a NEW terminal window**, start the worker:
 
 ```bash
-cd /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service
-
 make worker
 ```
 

@@ -73,14 +73,7 @@ make migrate
 
 5. **Start the application:**
 ```bash
-# Using the conda Python directly
-/Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-```
-
-Or create an alias for convenience:
-```bash
-# Add to ~/.zshrc or ~/.bashrc
-alias messaging-run="cd /path/to/messaging-service && /Users/alexeytyurin/anaconda3/envs/py311/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload"
+make run-bg
 ```
 
 6. **Start the background worker (REQUIRED for message processing):**
@@ -104,7 +97,7 @@ make stop  # Stops API and worker
 
 9. **Restart the application:**
 ```bash
-make restart  # Restarts both API and worker
+make restart-app  # Restarts both API
 ```
 
 The service will be available at:

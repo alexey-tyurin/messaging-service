@@ -49,7 +49,7 @@ This will:
 ## 🔄 Restarting the Application
 
 ```bash
-make restart
+make restart-app
 ```
 
 This will:
@@ -213,7 +213,7 @@ ps aux | grep -E "uvicorn|gunicorn|message_processor"
 1. **Always activate conda environment first**: `conda activate py311`
 2. **Use `make stop` before restarting** to avoid "Address in use" errors
 3. **Check Docker services are healthy** before starting the app
-4. **Use `make restart`** for quick restarts during development
+4. **Use `make restart-app`** for quick restarts during development
 
 ## 🆘 Emergency Stop
 

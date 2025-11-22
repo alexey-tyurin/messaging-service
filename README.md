@@ -20,7 +20,7 @@ make run
 make stop
 
 # 5. Restart the application
-make restart
+make restart-app
 ```
 
 **📖 See [START_STOP.md](./START_STOP.md) for complete instructions and troubleshooting.**

@@ -10,35 +10,6 @@ The messaging service has a configuration variable `SYNC_MESSAGE_PROCESSING` tha
 
 This means the system uses **async processing by default**, leveraging Redis queues and background workers for optimal performance and scalability.
 
-## Code Location
-
-In `app/core/config.py` (line 95):
-
-```python
-# Processing Mode
-sync_message_processing: bool = Field(default=False, env="SYNC_MESSAGE_PROCESSING")
-```
-
-In `app/services/message_service.py` (lines 94-127):
-
-```python
-async def send_message(self, message_data: Dict[str, Any]) -> Message:
-    # ...
-    
-    # Queue message for sending (line 95)
-    await self._queue_message_for_sending(message)
-    
-    # ...
-    
-    # Process message immediately if sync processing is enabled (line 122-127)
-    if settings.sync_message_processing:
-        logger.info(f"Processing message synchronously: {message.id}")
-        await self.process_outbound_message(str(message.id))
-        # Refresh message to get updated status
-        await self.db.refresh(message)
-    
-    return message
-```
 
 ## How It Works
 

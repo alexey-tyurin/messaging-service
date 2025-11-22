@@ -219,7 +219,7 @@ unset SYNC_MESSAGE_PROCESSING
 # SYNC_MESSAGE_PROCESSING=true
 
 # Restart API
-make restart
+make restart-app
 ```
 
 ---
@@ -334,13 +334,13 @@ Only use sync mode for quick debugging when you don't want to run the worker.
 **A:** Not recommended, but if you need it for debugging:
 ```bash
 export SYNC_MESSAGE_PROCESSING=true
-make restart
+make restart-app
 ```
 
 Remember to disable it afterwards:
 ```bash
 unset SYNC_MESSAGE_PROCESSING
-make restart
+make restart-app
 ```
 
 ---

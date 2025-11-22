@@ -72,7 +72,7 @@ make stop
 
 ### Restart Application
 ```bash
-make restart
+make restart-app
 ```
 
 This will:
@@ -221,7 +221,7 @@ tail -f logs/app.log | grep "Request"
 
 2. **Quick test after changes:**
    ```bash
-   make restart && sleep 2 && curl http://localhost:8080/health
+   make restart-app && sleep 2 && curl http://localhost:8080/health
    ```
 
 3. **Clean start:**
@@ -247,7 +247,7 @@ tail -f logs/app.log | grep "Request"
 | `make run` | Run in foreground | ✅ Yes |
 | `make run-bg` | Run in background | ❌ No |
 | `make stop` | Stop application | ❌ No |
-| `make restart` | Restart (background) | ❌ No |
+| `make restart-app` | Restart (background) | ❌ No |
 | `make status` | Check status | ❌ No |
 | `make logs` | View logs | ✅ Yes (until Ctrl+C) |
 | `make test` | Run tests | ✅ Yes (until complete) |
