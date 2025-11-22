@@ -376,14 +376,15 @@ docker compose down
 
 ### Management
 
-| Command | Description | Output |
-|---------|-------------|--------|
-| `make status` | Check API status | PID and port info |
-| `make logs` | View application logs | Real-time logs |
-| `make restart-app` | Restart API only | Stops and starts API |
-| `make migrate` | Run DB migrations | Creates/updates tables |
-| `make test` | Run all tests | Test results |
-| `make test-flow` | Run flow tests | Flow validation results |
+| Command | Description | Output                            |
+|---------|-------------|-----------------------------------|
+| `make status` | Check API status | PID and port info                 |
+| `make logs` | View application logs | Real-time logs                    |
+| `make restart-app` | Restart API only | Stops and starts API              |
+| `make migrate` | Run DB migrations | Creates/updates tables            |
+| `make db-reset` | Reset DB | Drops schema / Creates new schema |
+| `make test` | Run all tests | Test results                      |
+| `make test-flow` | Run flow tests | Flow validation results           |
 
 ### Docker Management
 
@@ -522,8 +523,6 @@ SELECT id, status, created_at FROM messages ORDER BY created_at DESC LIMIT 10;
 
 **Solution:**
 ```bash
-# Clean up not processed messages
-docker exec -it $(docker ps -q -f name=redis) redis-cli FLUSHALL
 
 # Check if worker is running
 ps aux | grep message_processor
@@ -732,6 +731,13 @@ make run
    pip list | grep -E "fastapi|sqlalchemy|redis"
    ```
 
+### Want to start with messages in queue from scratch
+
+**Solution:**
+```bash
+# Clean up not processed messages
+docker exec -it $(docker ps -q -f name=redis) redis-cli FLUSHALL
+```
 ---
 
 ## ⚠️ Synchronous Mode (Not Recommended)

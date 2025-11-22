@@ -356,6 +356,7 @@ make test         # Run tests
 make test-flow    # Run complete flow tests
 make lint         # Check code quality
 make migrate      # Run database migrations
+make db-reset     # Reset database: drop schema, create new schema
 
 make docker-up    # Start all Docker services
 make docker-down  # Stop all Docker services

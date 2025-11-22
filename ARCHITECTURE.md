@@ -159,6 +159,20 @@ message_events
 4. **Message Queue**: Redis Streams for async processing
 5. **Distributed Locks**: For coordination across instances
 
+## Message Flow (Async Mode - Default)
+
+```
+1. Client → POST /api/v1/messages/send
+2. API validates and saves to PostgreSQL (status: pending)
+3. API adds message to Redis queue
+4. API returns immediately (~50ms) with status: pending
+5. Background worker dequeues message
+6. Worker selects provider based on message type
+7. Worker sends through provider API (Twilio/SendGrid)
+8. Worker updates status (pending → sending → sent → delivered)
+9. Webhooks processed for delivery confirmations
+```
+
 ## Scalability Strategy
 
 ### Horizontal Scaling
