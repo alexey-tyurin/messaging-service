@@ -10,7 +10,7 @@ The messaging service supports two processing modes:
 - Messages are processed immediately in the API request
 - No Redis queue involved
 - Controlled by `SYNC_MESSAGE_PROCESSING=true`
-- **Current Default**: `True` in `app/core/config.py`
+- **Current Default**: `False` in `app/core/config.py`
 
 ### 2. **Asynchronous Processing** (Recommended for Production)
 - Messages are queued to Redis
