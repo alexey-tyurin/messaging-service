@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     enable_attachment_scanning: bool = Field(default=True, env="ENABLE_ATTACHMENT_SCANNING")
     
     # Processing Mode
-    sync_message_processing: bool = Field(default=True, env="SYNC_MESSAGE_PROCESSING")  # Process messages immediately instead of queuing
+    sync_message_processing: bool = Field(default=False, env="SYNC_MESSAGE_PROCESSING")  # Process messages asynchronously via queue (recommended)
     
     # Provider Error Simulation (for testing resilience)
     provider_error_rate: float = Field(default=0, env="PROVIDER_ERROR_RATE")  # Probability of provider errors (0.0 to 1.0)
