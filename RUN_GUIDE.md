@@ -522,6 +522,9 @@ SELECT id, status, created_at FROM messages ORDER BY created_at DESC LIMIT 10;
 
 **Solution:**
 ```bash
+# Clean up not processed messages
+docker exec -it $(docker ps -q -f name=redis) redis-cli FLUSHALL
+
 # Check if worker is running
 ps aux | grep message_processor
 
