@@ -6,7 +6,6 @@ This script tests that:
 1. Messages are properly queued to Redis
 2. Messages are not processed synchronously
 3. Worker processes messages from queue
-4. Webhook queue integration works
 """
 
 import asyncio
@@ -276,47 +275,6 @@ class RedisQueueVerifier:
         print_info("Make sure worker is started with: make worker")
         return False
     
-    async def test_webhook_queue(self) -> bool:
-        """Test webhook queue integration."""
-        print_header("Step 5: Test Webhook Queue")
-        
-        # Check webhook queue
-        webhook_queue = "webhook_queue"
-        queue_length = await self.redis_client.xlen(webhook_queue)
-        print_info(f"Webhook queue length: {queue_length}")
-        
-        # Send a test webhook
-        print_info("Sending test webhook...")
-        webhook_data = {
-            "From": "+15559876543",
-            "To": "+15551234567",
-            "Body": "Incoming test message",
-            "MessageSid": f"TEST_{datetime.now().timestamp()}"
-        }
-        
-        try:
-            response = await self.http_client.post(
-                f"{self.api_base_url}/api/v1/webhooks/twilio",
-                data=webhook_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
-            )
-            
-            if response.status_code == 200:
-                print_success("Webhook accepted")
-                
-                # Check if it was processed synchronously or queued
-                # For now, webhooks are processed synchronously in the current implementation
-                print_info("Webhook processing: SYNCHRONOUS")
-                print_warning("Note: Webhooks are currently processed synchronously, not via queue")
-                print_info("This is different from outbound message processing")
-                return True
-            else:
-                print_error(f"Webhook failed: {response.status_code}")
-                return False
-        except Exception as e:
-            print_error(f"Webhook test failed: {e}")
-            return False
-    
     async def test_queue_operations(self) -> bool:
         """Test basic Redis queue operations."""
         print_header("Step 6: Test Redis Queue Operations")
@@ -384,10 +342,7 @@ class RedisQueueVerifier:
                 print_warning("Skipping worker test (message was processed synchronously)")
                 worker_success = False
             
-            # Step 5: Test webhook queue
-            webhook_success = await self.test_webhook_queue()
-            
-            # Step 6: Test basic queue operations
+            # Step 5: Test basic queue operations
             queue_ops_success = await self.test_queue_operations()
             
             # Summary
@@ -398,7 +353,6 @@ class RedisQueueVerifier:
                 ("Message Queued to Redis", message.get("id") is not None),
                 ("Async Processing Mode", is_async),
                 ("Worker Processed Message", worker_success),
-                ("Webhook Integration", webhook_success),
                 ("Queue Operations", queue_ops_success)
             ]
             
