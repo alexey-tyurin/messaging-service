@@ -20,10 +20,8 @@ This means the system uses **async processing by default**, leveraging Redis que
 ```
 1. API receives request
 2. Message saved to database (status: pending)
-3. Message added to Redis queue ✓
-4. Message processed IMMEDIATELY (status: pending → sending → sent)
-5. Message returned with final status (sent)
-6. Worker may also process it from queue (potential duplicate!)
+3. Message processed IMMEDIATELY (status: pending → sending → sent)
+4. Message returned with final status (sent)
 ```
 
 **Use Only For:**
@@ -38,7 +36,6 @@ This means the system uses **async processing by default**, leveraging Redis que
 
 **Problems:**
 - Redis queue is effectively bypassed
-- Worker may cause duplicate processing
 - API response is slow (waits for provider ~2s)
 - Can't scale horizontally
 - Single point of failure
