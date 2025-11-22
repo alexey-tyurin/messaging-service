@@ -47,6 +47,7 @@ class MessageProcessor:
         # Start worker tasks
         self.tasks = [
             asyncio.create_task(self.process_sms_queue()),
+            asyncio.create_task(self.process_mms_queue()),
             asyncio.create_task(self.process_email_queue()),
             asyncio.create_task(self.process_retry_queue()),
             asyncio.create_task(self.process_webhook_queue()),
@@ -109,6 +110,36 @@ class MessageProcessor:
                 
             except Exception as e:
                 logger.error(f"Error processing SMS queue: {e}")
+                await asyncio.sleep(5)
+    
+    @monitor_performance("process_mms_queue")
+    async def process_mms_queue(self):
+        """Process MMS message queue."""
+        queue_name = "message_queue:mms"
+        
+        while self.running:
+            try:
+                # Get messages from queue
+                messages = await redis_manager.dequeue_messages(
+                    queue_name,
+                    count=settings.queue_batch_size,
+                    block=1000
+                )
+                
+                if not messages:
+                    await asyncio.sleep(1)
+                    continue
+                
+                # Process messages
+                for msg_data in messages:
+                    await self._process_message(msg_data)
+                
+                # Update metrics
+                queue_depth = await redis_manager.redis_client.xlen(queue_name)
+                MetricsCollector.update_queue_depth(queue_name, queue_depth)
+                
+            except Exception as e:
+                logger.error(f"Error processing MMS queue: {e}")
                 await asyncio.sleep(5)
     
     @monitor_performance("process_email_queue")

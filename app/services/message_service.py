@@ -663,10 +663,11 @@ class MessageService:
                     )
                 ),
                 Conversation.channel_type == channel_type
-            )
+            ).order_by(Conversation.created_at.desc())
         )
         
-        conversation = result.scalar_one_or_none()
+        # Use first() instead of scalar_one_or_none() to handle multiple conversations
+        conversation = result.scalars().first()
         
         if not conversation:
             # Create new conversation

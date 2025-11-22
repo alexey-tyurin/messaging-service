@@ -238,9 +238,16 @@ class RedisManager:
             List of messages
         """
         try:
+            # Store last read ID per queue to continue from where we left off
+            if not hasattr(self, '_last_ids'):
+                self._last_ids = {}
+            
+            # Use last read ID or start from beginning
+            last_id = self._last_ids.get(queue, "0-0")
+            
             # Read messages from stream
             messages = await self.redis_client.xread(
-                {queue: "$"},
+                {queue: last_id},
                 count=count,
                 block=block
             )
@@ -254,6 +261,8 @@ class RedisManager:
                         message_data = json.loads(data_value)
                         message_data["_id"] = message_id
                         result.append(message_data)
+                        # Update last read ID for this queue
+                        self._last_ids[queue] = message_id
             
             return result
             
