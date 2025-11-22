@@ -148,21 +148,7 @@ Message Send Attempt
 
 ## Processing Modes
 
-### Synchronous Processing (sync_message_processing=true)
-
-Messages are processed immediately when created:
-
-```python
-# Message created
-message = await service.send_message(data)
-# Immediately processed
-await service.process_outbound_message(message.id)
-# Returns with final status
-```
-
-**Error Handling**: Errors are handled inline with immediate retry attempts.
-
-### Asynchronous Processing (sync_message_processing=false)
+### Asynchronous Processing (sync_message_processing=false) - Default & Recommended
 
 Messages are queued and processed by workers:
 
@@ -177,6 +163,47 @@ await worker.process_message(message.id)
 ```
 
 **Error Handling**: Failed messages are requeued with appropriate delays.
+
+**Use for:**
+- ✅ Production deployments
+- ✅ Integration tests (tests real flow)
+- ✅ Load testing
+- ✅ CI/CD pipelines
+
+### Synchronous Processing (sync_message_processing=true) - Debug Only
+
+**⚠️ NOT RECOMMENDED: Only for quick debugging, NOT for integration tests or production!**
+
+Messages are processed immediately when created:
+
+```python
+# Message created
+message = await service.send_message(data)
+# Immediately processed
+await service.process_outbound_message(message.id)
+# Returns with final status
+```
+
+**Error Handling**: Errors are handled inline with immediate retry attempts.
+
+**⚠️ Limitations:**
+- **Only for quick debugging** - bypasses queue, immediate processing
+- **NOT for integration tests** - doesn't test real production flow
+- **NOT for production** - slow, doesn't scale, single point of failure
+- API responses are slow (~2s instead of ~50ms)
+- Cannot scale horizontally
+
+**Use only for:**
+- Quick debugging when you don't want to run worker
+- Testing API validation logic only
+
+**Do NOT use for:**
+- Integration tests (must test queue flow!)
+- Production deployments
+- Load testing
+- CI/CD pipelines
+
+See [SYNC_VS_ASYNC_PROCESSING.md](./SYNC_VS_ASYNC_PROCESSING.md) for detailed comparison.
 
 ## Custom Exceptions
 

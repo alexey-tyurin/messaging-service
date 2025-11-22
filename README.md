@@ -23,7 +23,7 @@ make stop
 make restart-app
 ```
 
-**📖 See [START_STOP.md](./START_STOP.md) for complete instructions and troubleshooting.**
+**📖 See [QUICK_START.md](./QUICK_START.md) to get started or [RUN_GUIDE.md](./RUN_GUIDE.md) for detailed operations and troubleshooting.**
 
 **Application URLs:**
 - 📚 API Docs: http://localhost:8080/docs

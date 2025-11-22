@@ -1,21 +1,20 @@
-# Messaging Service
+# Messaging Service - Quick Start Guide
 
 A production-ready, distributed messaging service supporting SMS, MMS, Email, and extensible for Voice/Voicemail. Built with FastAPI, PostgreSQL, Redis, and designed for horizontal scalability.
 
 ## 🏗️ Architecture Highlights
 
-- **Event-driven architecture** with async message processing
+- **Event-driven architecture** with async message processing via Redis queues
 - **Microservices-ready** design with clear service boundaries
 - **Provider abstraction** using Strategy pattern
 - **Comprehensive observability** with metrics, logging, and tracing
 - **Rate limiting** and circuit breakers for resilience
-- **Redis-based** queuing and caching
 - **PostgreSQL** with proper indexing and migrations
 - **Docker-ready** with multi-stage builds
 
-## 📋 Features
+## 📋 Core Features
 
-### Core Functionality
+### Messaging
 - ✅ Unified API for SMS, MMS, and Email
 - ✅ Automatic conversation threading
 - ✅ Provider failover and retry logic
@@ -24,7 +23,7 @@ A production-ready, distributed messaging service supporting SMS, MMS, Email, an
 - ✅ Rate limiting per client
 - ✅ Idempotency for message sending
 
-### Production Features
+### Production Ready
 - ✅ Health checks and readiness probes
 - ✅ Prometheus metrics integration
 - ✅ Structured JSON logging
@@ -33,125 +32,91 @@ A production-ready, distributed messaging service supporting SMS, MMS, Email, an
 - ✅ Redis connection management
 - ✅ Graceful shutdown handling
 
-### Extensibility
-- 🔄 Ready for Voice calls integration
-- 🔄 Voicemail drop support structure
-- 🔄 Attachment scanning capability
-- 🔄 Multi-region deployment ready
+---
 
-## 🚀 Quick Start
+## ⚠️ Important: Async Processing by Default
+
+The system uses **asynchronous processing by default** (`SYNC_MESSAGE_PROCESSING=false`):
+- Messages are queued to Redis
+- Background worker processes messages from queues
+- **Both API and Worker must be running**
+- This is production-ready configuration
+
+**Required Services:**
+1. **API Server** - Accepts and queues messages
+2. **Background Worker** - Processes messages from queues (**REQUIRED!**)
+
+---
+
+## 🚀 Quick Start (5 Steps)
 
 ### Prerequisites
-- Python 3.11+ with conda environment
+- Python 3.11+ with conda environment (`py311`)
 - Docker and Docker Compose
 - PostgreSQL 15+ (via Docker)
 - Redis 7+ (via Docker)
 
-### Local Development Setup
+### Step 1: Activate Environment & Start Docker
 
-1. **Activate your conda environment:**
 ```bash
+# Activate conda environment
 conda activate py311
-```
 
-2. **Start Docker services (PostgreSQL & Redis):**
-```bash
+# Navigate to project
 cd messaging-service
-docker compose up -d postgres redis
-```
 
-3. **Verify Docker services are running:**
-```bash
+# Start Docker services
+docker compose up -d postgres redis
+
+# Verify they're healthy
 docker compose ps
 # Should show postgres and redis as "Up (healthy)"
 ```
 
-4. **Run database migrations:**
+### Step 2: Run Database Migrations
+
 ```bash
 make migrate
 ```
 
-5. **Start the application:**
+This creates all necessary database tables and indexes.
+
+### Step 3: Start the API Server
+
 ```bash
+# Foreground (recommended for development - see logs in terminal)
+make run
+
+# OR Background (frees terminal)
 make run-bg
 ```
 
-6. **Start the background worker (REQUIRED for message processing):**
+The API will start on http://localhost:8080
 
-**Important**: The system uses async processing by default. Messages will stay in "pending" status until the worker processes them.
+### Step 4: Start the Background Worker (REQUIRED!)
+
+**⚠️ CRITICAL:** The worker is required for message processing!
 
 ```bash
-# In a separate terminal window
+# In a separate terminal
 conda activate py311
 cd messaging-service
 make worker
-
-# Or directly:
-python -m app.workers.message_processor
 ```
 
-8. **Stop the application:**
+**Or in background:**
 ```bash
-make stop  # Stops API and worker
+make worker &
 ```
 
-9. **Restart the application:**
-```bash
-make restart-app  # Restarts both API
-```
-
-The service will be available at:
-- API: http://localhost:8080
-- Documentation: http://localhost:8080/api/v1/docs
-- Metrics: http://localhost:8080/metrics
-- Health: http://localhost:8080/health
-
-### Docker Development (Full Stack)
+### Step 5: Verify Everything is Working
 
 ```bash
-# Start all services (including app and worker containers)
-docker compose up -d
+# Check API health
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","timestamp":"..."}
 
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
-```
-
-### Troubleshooting
-
-**Error: "Address already in use"**
-```bash
-make stop  # Kill all processes on port 8080
-```
-
-**Error: "PostgreSQL is not available"**
-```bash
-docker compose up -d postgres
-docker compose ps postgres  # Check status
-```
-
-**Error: "Redis connection failed"**
-```bash
-docker compose up -d redis
-docker compose ps redis  # Check status
-```
-
-**Error: "FastAPI not found"**
-```bash
-# Make sure you're in the correct conda environment
-conda activate py311
-```
-
-For more detailed troubleshooting, see [START_STOP.md](./START_STOP.md)
-
-## 📡 API Endpoints
-
-### Messages
-
-#### Send Message
-```bash
+# Send a test message
 curl -X POST http://localhost:8080/api/v1/messages/send \
   -H "Content-Type: application/json" \
   -d '{
@@ -160,104 +125,70 @@ curl -X POST http://localhost:8080/api/v1/messages/send \
     "type": "sms",
     "body": "Hello from Hatch!"
   }'
+
+# Should return status: "pending"
+# Wait 2-3 seconds, message status will change to "sent"
 ```
 
-#### List Messages
+---
+
+## 📡 Available Endpoints
+
+Once running, access:
+- **API Documentation**: http://localhost:8080/docs
+- **Health Check**: http://localhost:8080/health
+- **Metrics**: http://localhost:8080/metrics
+- **Prometheus**: http://localhost:9090 (if started via docker compose)
+- **Grafana**: http://localhost:3000 (admin/admin)
+
+---
+
+## 🛑 Stopping the Service
+
 ```bash
-curl http://localhost:8080/api/v1/messages?limit=10
+# Stop all services (API + worker)
+make stop
 ```
 
-### Conversations
+Or if running in foreground, press `Ctrl+C` in each terminal.
 
-#### Get Conversation
+---
+
+## 🔄 Restarting
+
 ```bash
-curl http://localhost:8080/api/v1/conversations/{conversation_id}
+# Restart API only (worker keeps running)
+make restart-app
 ```
 
-#### List Conversations
-```bash
-curl http://localhost:8080/api/v1/conversations?participant=+15551234567
-```
-
-### Webhooks
-
-#### Twilio Webhook
-```
-POST /api/v1/webhooks/twilio
-```
-
-#### SendGrid Webhook
-```
-POST /api/v1/webhooks/sendgrid
-```
-
-## 📊 Database Schema
-
-### Core Tables
-- **conversations** - Message threads between participants
-- **messages** - Individual messages with status tracking
-- **message_events** - Event sourcing for message lifecycle
-- **webhook_logs** - Incoming webhook audit trail
-
-### Indexes
-- Composite indexes on frequently queried columns
-- Partial indexes for status-based queries
-- BRIN indexes for time-series data
-
-## 🔧 Configuration
-
-Environment variables (`.env` file):
-
-```env
-# Database
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=messaging_user
-POSTGRES_PASSWORD=messaging_password
-POSTGRES_DB=messaging_service
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Application
-ENVIRONMENT=development
-DEBUG=true
-SECRET_KEY=your-secret-key-here
-
-# Rate Limiting
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_PERIOD=60
-
-```
+---
 
 ## 🧪 Testing
 
-### Processing Mode
-
-The system uses **asynchronous processing by default** (`SYNC_MESSAGE_PROCESSING=false`):
-- Messages are queued to Redis
-- Background worker processes messages from queues
-- Production-ready configuration
-- **Worker must be running** for message processing
-
-See [SYNC_VS_ASYNC_PROCESSING.md](./SYNC_VS_ASYNC_PROCESSING.md) for details.
-
-### Message Flow Tests (Complete Integration)
-
-Test the complete 8-step message flow through Redis queues:
-
+### Quick API Test
 ```bash
-# Ensure worker is running first!
-make worker  # Run in separate terminal
-
-# Then run the flow test
-make test-flow  # Tests SMS/MMS/Email flow + webhooks
+# Simple API smoke test
+make test
 ```
 
-This validates:
-- API → Database → Redis Queue → Worker → Provider → Status Updates
+### Complete Flow Test (Requires Worker!)
+```bash
+# Ensure worker is running first!
+# Terminal 1: make worker
+
+# Terminal 2: Run flow test
+make test-flow
+```
+
+This validates the complete 8-step message flow:
+1. API receives request
+2. Message stored in PostgreSQL (status: pending)
+3. Message queued to Redis
+4. API returns immediately
+5. Worker picks up from queue
+6. Worker processes through provider
+7. Status updated (pending → sending → sent)
+8. Delivery confirmations processed
 
 See [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md) for details.
 
@@ -271,105 +202,202 @@ pytest tests/unit -v --cov=app
 pytest tests/integration -v
 ```
 
-### Load Testing
+---
+
+## ⚠️ Troubleshooting
+
+### Messages Stuck in "pending"
+
+**Symptom:** Messages never change from "pending" status
+
+**Cause:** Worker is not running
+
+**Solution:**
 ```bash
-locust -f tests/load/locustfile.py --host=http://localhost:8080
+make worker  # Run in separate terminal
 ```
 
-### API Testing
+### "Address already in use" (Port 8080)
+
+**Solution:**
 ```bash
-./bin/test.sh  # Runs curl-based API tests
+make stop
+make run
 ```
 
-## 📈 Monitoring
+### "PostgreSQL is not available"
 
-### Prometheus Metrics
-- Request rate, latency, and error rate (RED metrics)
-- Queue depth and processing times
-- Provider success/failure rates
-- Database connection pool metrics
-- Cache hit/miss ratios
+**Solution:**
+```bash
+docker compose up -d postgres
+docker compose ps postgres  # Check status
+```
 
-### Health Checks
-- `/health` - Basic liveness check
-- `/ready` - Readiness with dependency checks
-- `/metrics` - Prometheus metrics endpoint
+### "Redis is not available"
 
-### Logging
-- Structured JSON logging
-- Correlation IDs for request tracing
-- Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+**Solution:**
+```bash
+docker compose up -d redis
+docker compose ps redis  # Check status
+```
 
-## 🏗️ System Design
+### "FastAPI not found"
 
-### Message Flow (Async Mode - Default)
+**Solution:**
+```bash
+# Activate conda environment
+conda activate py311
+make run
+```
 
-1. Client sends message via REST API
-2. Message validated and stored in PostgreSQL (status: pending)
-3. Message queued in Redis for async processing
-4. API returns immediately with pending status
-5. Worker picks up message from queue
-6. Provider selected based on message type
-7. Message sent through provider API
-8. Status updated and events recorded (status: sending → sent → delivered)
+For more troubleshooting, see [RUN_GUIDE.md](./RUN_GUIDE.md)
+
+---
+
+## 📊 Message Flow (Async Mode - Default)
+
+```
+1. Client → POST /api/v1/messages/send
+2. API validates and saves to PostgreSQL (status: pending)
+3. API adds message to Redis queue
+4. API returns immediately (~50ms) with status: pending
+5. Background worker dequeues message
+6. Worker selects provider based on message type
+7. Worker sends through provider API (Twilio/SendGrid)
+8. Worker updates status (pending → sending → sent → delivered)
 9. Webhooks processed for delivery confirmations
-
-**Note**: The background worker must be running for messages to be processed (`make worker`).
-
-### Scaling Strategy
-- **Horizontal scaling** of API servers behind load balancer
-- **Worker scaling** based on queue depth
-- **Database read replicas** for query distribution
-- **Redis Cluster** for cache distribution
-- **Message partitioning** by conversation ID
-
-## 🔄 Extension Points
-
-### Adding Voice Support
-1. Implement `VoiceProvider` class
-2. Add voice-specific message types
-3. Handle SIP/WebRTC integration
-4. Add call recording storage
-
-### Adding New Providers
-1. Extend `MessageProvider` base class
-2. Implement required methods
-3. Register in `ProviderFactory`
-4. Add webhook endpoints
-
-## 🚢 Deployment
-
-### Production Build
-```bash
-docker build -t messaging-service:latest .
 ```
 
-### Kubernetes
+**Note:** Worker must be running for steps 5-8!
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+The application uses environment variables for configuration:
+
 ```bash
-kubectl apply -f k8s/
+# Database
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=messaging_user
+POSTGRES_PASSWORD=messaging_password
+POSTGRES_DB=messaging_service
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Processing Mode (default: async)
+SYNC_MESSAGE_PROCESSING=false  # async processing (recommended)
+
+# Application
+ENVIRONMENT=development
+DEBUG=true
 ```
 
-### Environment-Specific Configs
-- Development: Auto-reload, debug logging
-- Staging: Production-like with verbose logging
-- Production: Optimized, minimal logging
+These are automatically set by the startup script when running locally.
+
+---
+
+## ⚠️ Synchronous Mode (Not Recommended)
+
+By default, the system uses async processing (production-ready). You can enable sync mode for **quick debugging only**:
+
+```bash
+export SYNC_MESSAGE_PROCESSING=true
+make restart-app
+```
+
+**⚠️ Important Limitations:**
+- **Only for quick debugging** - messages processed immediately in API
+- **NOT for integration tests** - doesn't test the real production flow
+- **NOT for production** - slow (~2s API response), doesn't scale, single point of failure
+- API responses are slow instead of fast
+- Cannot scale horizontally
+- Worker not needed (but system is not production-ready)
+
+**When to use sync mode:**
+- ✅ Quick debugging when you don't want to run the worker
+- ✅ Testing API validation logic only
+
+**When NOT to use sync mode:**
+- ❌ Integration tests (must test the queue flow!)
+- ❌ Production deployments
+- ❌ Load testing
+- ❌ CI/CD pipelines
+- ❌ Any scenario requiring scalability
+
+**Return to async mode:**
+```bash
+unset SYNC_MESSAGE_PROCESSING
+make restart-app
+make worker  # Remember to start worker!
+```
+
+See [SYNC_VS_ASYNC_PROCESSING.md](./SYNC_VS_ASYNC_PROCESSING.md) for detailed comparison.
+
+---
 
 ## 📝 Development Commands
 
 ```bash
-make help          # Show all commands
-make setup         # Initial setup
-make run           # Run application
-make worker        # Run background worker
-make test          # Run tests
-make lint          # Run linting
-make format        # Format code
-make migrate       # Run migrations
-make docker-up     # Start Docker services
-make docker-logs   # View logs
-make db-shell      # PostgreSQL shell
-make redis-cli     # Redis CLI
+make run          # Start API (foreground)
+make run-bg       # Start API (background)
+make worker       # Start worker (REQUIRED!)
+make stop         # Stop all services
+make restart-app  # Restart API
+make status       # Check API status
+make logs         # View logs
+
+make test         # Run tests
+make test-flow    # Run complete flow tests
+make lint         # Check code quality
+make migrate      # Run database migrations
+
+make docker-up    # Start all Docker services
+make docker-down  # Stop all Docker services
 ```
+
+### Essential Development Workflow
+
+```bash
+# Terminal 1: API
+conda activate py311
+make run
+
+# Terminal 2: Worker (REQUIRED!)
+conda activate py311
+make worker
+
+# Terminal 3: Development/Testing
+conda activate py311
+make test
+curl http://localhost:8080/health
+```
+
+---
+
+## 🐳 Docker Development (Full Stack)
+
+Start everything in containers:
+
+```bash
+# Start all services (API, worker, PostgreSQL, Redis, Prometheus, Grafana)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
+```
+
+This is the closest to production deployment.
+
+---
 
 ## 🎯 Performance Targets
 
@@ -379,24 +407,35 @@ make redis-cli     # Redis CLI
 - Availability: 99.99% uptime
 - Error Rate: < 0.1%
 
-## 🔒 Security
-
-- JWT-based authentication ready
-- Rate limiting per client
-- Webhook signature validation
-- SQL injection prevention
-- Input sanitization
-- PII data masking in logs
+---
 
 ## 📚 Documentation
 
-- API Documentation: http://localhost:8080/docs
-- Architecture: See `ARCHITECTURE.md`
-- Database Schema: See migrations in `alembic/versions/`
+- **Detailed Operations**: [RUN_GUIDE.md](./RUN_GUIDE.md)
+- **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Sync vs Async**: [SYNC_VS_ASYNC_PROCESSING.md](./SYNC_VS_ASYNC_PROCESSING.md)
+- **Message Flow Testing**: [MESSAGE_FLOW_TESTING.md](./MESSAGE_FLOW_TESTING.md)
+- **Redis Queue Verification**: [REDIS_QUEUE_VERIFICATION.md](./REDIS_QUEUE_VERIFICATION.md)
+- **Product Requirements**: [PRD.md](./PRD.md)
 
-## 🤝 Contributing
+---
 
-1. Create feature branch
-2. Write tests
-3. Ensure linting passes
-4. Create pull request
+## 🆘 Need Help?
+
+1. Check [RUN_GUIDE.md](./RUN_GUIDE.md) for detailed operational guide
+2. Check [ARCHITECTURE.md](./ARCHITECTURE.md) for system design
+3. Check logs: `make logs` or `tail -f logs/app.log`
+4. Verify services: `docker compose ps`
+5. Check API health: `curl http://localhost:8080/health`
+
+---
+
+**Quick Checklist:**
+- ✅ Conda environment activated
+- ✅ Docker services running (postgres, redis)
+- ✅ Database migrated
+- ✅ API server started
+- ✅ **Worker started (REQUIRED!)**
+- ✅ Health check passes
+
+**That's it! You're ready to send messages.** 🚀

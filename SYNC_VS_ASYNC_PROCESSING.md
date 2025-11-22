@@ -15,7 +15,7 @@ This means the system uses **async processing by default**, leveraging Redis que
 
 ### Synchronous Mode (SYNC_MESSAGE_PROCESSING=True)
 
-**NOT RECOMMENDED FOR PRODUCTION**
+**⚠️ NOT RECOMMENDED FOR PRODUCTION OR INTEGRATION TESTS**
 
 ```
 1. API receives request
@@ -26,12 +26,23 @@ This means the system uses **async processing by default**, leveraging Redis que
 6. Worker may also process it from queue (potential duplicate!)
 ```
 
+**Use Only For:**
+- ✅ Quick debugging when you don't want to run worker
+- ✅ Testing API validation logic only
+
+**Do NOT Use For:**
+- ❌ **Integration tests** - doesn't test real production flow
+- ❌ **Production** - slow, doesn't scale, single point of failure
+- ❌ **Load testing** - can't scale horizontally
+- ❌ **CI/CD pipelines** - should test real async flow
+
 **Problems:**
 - Redis queue is effectively bypassed
 - Worker may cause duplicate processing
-- API response is slow (waits for provider)
+- API response is slow (waits for provider ~2s)
 - Can't scale horizontally
 - Single point of failure
+- Doesn't test production architecture
 
 ### Asynchronous Mode (SYNC_MESSAGE_PROCESSING=False)
 
@@ -64,23 +75,37 @@ The default is already set to async mode in `app/core/config.py` (line 95):
 sync_message_processing: bool = Field(default=False, env="SYNC_MESSAGE_PROCESSING")
 ```
 
-### To Enable Synchronous Mode (Not Recommended)
+### To Enable Synchronous Mode (⚠️ Only for Quick Debugging)
 
-If you need synchronous processing for debugging or testing:
+**⚠️ WARNING: Use sync mode ONLY for quick debugging, NOT for:**
+- ❌ Integration tests (they must test the real queue flow!)
+- ❌ Production deployments
+- ❌ Load testing
+- ❌ CI/CD pipelines
+
+If you need synchronous processing for **quick debugging only**:
 
 **Option 1: Set Environment Variable**
 
 ```bash
 # In terminal before starting services
 export SYNC_MESSAGE_PROCESSING=true
+make restart-app
 
-# Or in .env file
-echo "SYNC_MESSAGE_PROCESSING=true" >> .env
+# When done debugging, disable it:
+unset SYNC_MESSAGE_PROCESSING
+make restart-app
+make worker  # Remember to start worker!
 ```
 
-**Option 2: Docker Compose**
+**Option 2: In .env file (not recommended)**
 
-Add to `docker-compose.yml`:
+```bash
+echo "SYNC_MESSAGE_PROCESSING=true" >> .env
+# Remember to remove this line after debugging!
+```
+
+**Option 3: Docker Compose (not recommended)**
 
 ```yaml
 services:
@@ -88,6 +113,8 @@ services:
     environment:
       - SYNC_MESSAGE_PROCESSING=true
 ```
+
+**Remember:** Always return to async mode after debugging!
 
 ## Verification
 
@@ -202,16 +229,25 @@ Expected output:
 **The system is already configured correctly!**
 
 The default setting (`SYNC_MESSAGE_PROCESSING=false`) is optimal for:
-1. Production deployments
-2. Documented architecture compliance
-3. Performance and scalability
-4. Proper separation of concerns
-5. Horizontal scaling capability
-6. Industry best practices
+1. ✅ **Production deployments** - Production-ready configuration
+2. ✅ **Integration tests** - Tests real async flow via queues
+3. ✅ **Load testing** - Can scale horizontally
+4. ✅ **CI/CD pipelines** - Tests production architecture
+5. ✅ **Performance** - Fast API responses (~50ms)
+6. ✅ **Scalability** - Horizontal scaling capability
+7. ✅ **Industry best practices** - Event-driven architecture
 
 **For Development**: 
-- **Use default (async mode)** - Tests the real production flow
-- **Only use sync mode** for quick debugging when you don't want to run the worker
+- ✅ **Use default (async mode)** - Tests the real production flow
+- ⚠️ **Use sync mode ONLY** for quick debugging when you don't want to run the worker
+  - **NOT for integration tests** - They should test the queue flow!
+  - **NOT for production** - Slow, doesn't scale
+
+**For Testing**:
+- ✅ **Integration tests** - Always use async mode (default)
+- ✅ **Flow tests** - Always use async mode (default)
+- ✅ **Load tests** - Always use async mode (default)
+- ⚠️ **Quick unit tests** - Sync mode acceptable (but async is better)
 
 ## Worker Management
 

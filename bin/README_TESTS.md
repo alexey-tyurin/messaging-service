@@ -415,6 +415,6 @@ tests/
 
 - [MESSAGE_FLOW_TESTING.md](../MESSAGE_FLOW_TESTING.md) - Complete flow testing guide
 - [QUICK_START.md](../QUICK_START.md) - Getting started guide
+- [RUN_GUIDE.md](../RUN_GUIDE.md) - Running and managing services
 - [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture
-- [START_STOP.md](../START_STOP.md) - Running services
 
