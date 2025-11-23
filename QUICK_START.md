@@ -425,7 +425,7 @@ This is the closest to production deployment.
 ---
 
 
-## Rate Limiting
+## 🔒 Rate Limiting
 
 The service includes built-in API rate limiting using Redis for distributed rate limiting across multiple instances.
 

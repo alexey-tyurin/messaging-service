@@ -131,23 +131,29 @@ async def test_burst_requests(
     """
     print(f"\n🚀 Testing Burst Rate Limiting (No Delay)")
     print(f"Target: {base_url}/health")
-    print(f"Burst size: {burst_size} requests")
+    print(f"Burst size: {burst_size} requests sent rapidly")
     print("-" * 60)
     
     async with aiohttp.ClientSession() as session:
-        # Send all requests concurrently
-        tasks = [
-            send_request(session, f"{base_url}/health", i)
-            for i in range(1, burst_size + 1)
-        ]
+        results = []
         
-        results = await asyncio.gather(*tasks)
+        # Send requests as fast as possible sequentially
+        # This ensures they all hit the rate limit window
+        for i in range(1, burst_size + 1):
+            result = await send_request(session, f"{base_url}/health", i)
+            results.append(result)
+            
+            # Show progress every 20 requests
+            if i % 20 == 0 or result["status_code"] == 429:
+                status_symbol = "✅" if result["status_code"] == 200 else "🚫"
+                print(f"{status_symbol} Request {i}: Status={result['status_code']}, Remaining={result.get('rate_limit_remaining', 'N/A')}")
         
         # Summary
         successful = sum(1 for r in results if r["status_code"] == 200)
         rate_limited = sum(1 for r in results if r["status_code"] == 429)
         errors = sum(1 for r in results if isinstance(r["status_code"], str))
         
+        print("-" * 60)
         print(f"\n📊 Burst Summary:")
         print(f"  ✅ Successful: {successful}")
         print(f"  🚫 Rate Limited: {rate_limited}")
@@ -156,8 +162,10 @@ async def test_burst_requests(
         
         if rate_limited > 0:
             print(f"\n✅ Rate limiting is working! {rate_limited} requests were blocked.")
+            print(f"   First rate-limited request: #{next(i for i, r in enumerate(results, 1) if r['status_code'] == 429)}")
         else:
             print(f"\n⚠️  No requests were rate limited. The limit might be higher than {burst_size}.")
+            print(f"   Check configuration: RATE_LIMIT_REQUESTS and RATE_LIMIT_ENABLED")
 
 
 async def main():
@@ -167,19 +175,20 @@ async def main():
     print("=" * 60)
     print()
     
-    # Test 1: Moderate paced requests
+    # Test 1: Moderate paced requests (quick check)
     await test_rate_limiting(
-        num_requests=10,
-        delay=0.1
+        num_requests=5,
+        delay=0.2
     )
     
     print("\n" + "=" * 60)
     
-    # Wait a bit between tests
-    print("\n⏳ Waiting 5 seconds before burst test...\n")
-    await asyncio.sleep(5)
+    # Wait for sliding window to reset
+    print("\n⏳ Waiting 65 seconds for rate limit window to reset...")
+    print("   (This ensures we start fresh for the burst test)\n")
+    await asyncio.sleep(65)
     
-    # Test 2: Burst of requests
+    # Test 2: Burst of requests to trigger rate limiting
     await test_burst_requests(burst_size=110)
     
     print("\n" + "=" * 60)
