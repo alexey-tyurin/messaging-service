@@ -49,28 +49,9 @@ The key optimization is the `include_relationships` parameter:
 
 All cached entries have a **5-minute (300 seconds)** TTL to ensure data freshness.
 
-## Modified Files
+## Files
 
 ### 1. `app/services/message_service.py`
-
-#### `get_message()` Method
-- **Before**: Direct database query
-- **After**: 
-  - Added `include_relationships` parameter (default: False)
-  - Check Redis cache first
-  - On cache hit without relationships: **Return directly from cache (NO DB QUERY)**
-  - On cache hit with relationships: Query DB only for conversation and events
-  - On cache miss: fetch from DB, cache the result, track metrics
-  - Cache structure includes all message fields serialized as JSON
-  
-**API Usage:**
-```python
-# Fast cache-only retrieval (API endpoints use this)
-message = await service.get_message(message_id, include_relationships=False)
-
-# Full retrieval with relationships (when needed)
-message = await service.get_message(message_id, include_relationships=True)
-```
 
 #### Cache Invalidation Points
 - `send_message()`: Invalidates conversation cache when new message is sent
@@ -79,25 +60,6 @@ message = await service.get_message(message_id, include_relationships=True)
 - `update_message_status()`: Invalidates message cache after status update
 
 ### 2. `app/services/conversation_service.py`
-
-#### `get_conversation()` Method
-- **Before**: Direct database query (with cache write only)
-- **After**:
-  - `include_messages` parameter controls relationship loading
-  - Check Redis cache first
-  - On cache hit without messages: **Return directly from cache (NO DB QUERY)**
-  - On cache hit with messages: Query DB only for message relationships
-  - On cache miss: fetch from DB, cache the result, track metrics
-  - Cache structure includes conversation metadata
-
-**API Usage:**
-```python
-# Fast cache-only retrieval (API endpoints use this)
-conversation = await service.get_conversation(conversation_id, include_messages=False)
-
-# Full retrieval with messages
-conversation = await service.get_conversation(conversation_id, include_messages=True)
-```
 
 #### Cache Invalidation Points
 - `update_conversation()`: Invalidates cache (already existed)
@@ -344,12 +306,12 @@ Follow the pattern: `{entity_type}:{entity_id}`
 ## Summary
 
 The Redis caching implementation provides:
-✅ Cache-first read pattern for messages and conversations
-✅ Automatic cache invalidation on updates
-✅ 5-minute TTL for cache entries
-✅ Comprehensive metrics and logging
-✅ Minimal impact on existing code
-✅ Improved performance and scalability
+- ✅ Cache-first read pattern for messages and conversations
+- ✅ Automatic cache invalidation on updates
+- ✅ 5-minute TTL for cache entries
+- ✅ Comprehensive metrics and logging
+- ✅ Minimal impact on existing code
+- ✅ Improved performance and scalability
 
 The implementation follows established patterns and best practices, ensuring maintainability and reliability while providing significant performance improvements for read-heavy workloads.
 

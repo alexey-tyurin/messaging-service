@@ -1,28 +1,5 @@
 # Async Mode Quick Reference Card
 
-## 🎯 TL;DR
-
-**The system uses async processing by default. This is correct and production-ready.**
-
-**What you need to do:**
-1. ✅ Nothing - configuration is already correct
-2. ✅ Always run the worker (`make worker`)
-3. ✅ Expect messages to start with status "pending"
-
----
-
-## Configuration Status
-
-```
-Current Setting: SYNC_MESSAGE_PROCESSING = false (default)
-Location:        app/core/config.py, line 95
-Mode:           Async Processing (via Redis queues)
-Status:         ✅ Production Ready
-Action Needed:  None - already configured correctly
-```
-
----
-
 ## How It Works
 
 ### Message Flow (Async Mode - Default)
