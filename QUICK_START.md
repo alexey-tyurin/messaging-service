@@ -202,6 +202,15 @@ pytest tests/unit -v --cov=app
 pytest tests/integration -v
 ```
 
+### Rate Limiting Tests
+```bash
+# Automated rate limiting test
+make test-rate-limit
+
+# Manual test
+for i in {1..110}; do curl -i http://localhost:8080/health 2>/dev/null | grep -E "HTTP|X-RateLimit"; done
+```
+
 ---
 
 ## ⚠️ Troubleshooting
@@ -292,6 +301,11 @@ REDIS_PORT=6379
 
 # Processing Mode (default: async)
 SYNC_MESSAGE_PROCESSING=false  # async processing (recommended)
+
+# Rate Limiting (default: enabled)
+RATE_LIMIT_ENABLED=true        # enable/disable rate limiting
+RATE_LIMIT_REQUESTS=100        # max requests per window
+RATE_LIMIT_PERIOD=60           # time window in seconds
 
 # Application
 ENVIRONMENT=development
@@ -409,6 +423,68 @@ This is the closest to production deployment.
 - Error Rate: < 0.1%
 
 ---
+
+
+## Rate Limiting
+
+The service includes built-in API rate limiting using Redis for distributed rate limiting across multiple instances.
+
+### How It Works
+
+- **Algorithm**: Sliding window counter using Redis sorted sets
+- **Granularity**: Per client IP + endpoint
+- **Default Limits**: 100 requests per 60 seconds (per client/endpoint)
+- **Response Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+- **HTTP 429**: Returns when rate limit exceeded
+
+### Configuration
+
+Rate limiting can be configured via environment variables:
+
+```bash
+# Enable/disable rate limiting
+RATE_LIMIT_ENABLED=true
+
+# Number of requests allowed
+RATE_LIMIT_REQUESTS=100
+
+# Time window in seconds
+RATE_LIMIT_PERIOD=60
+```
+
+### Testing Rate Limiting
+
+```bash
+# Run the rate limiting test script
+python bin/test_rate_limiting.py
+
+# Or test manually with curl
+for i in {1..110}; do
+  curl -w "\n" http://localhost:8080/health
+done
+```
+
+After 100 requests, you should see HTTP 429 responses.
+
+### Rate Limit Headers
+
+All responses include rate limit information:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 60
+```
+
+When rate limited (HTTP 429):
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "Too many requests. Please try again later."
+}
+```
+
 
 ## 📚 Documentation
 

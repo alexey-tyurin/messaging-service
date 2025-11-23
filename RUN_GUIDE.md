@@ -865,6 +865,53 @@ RATE_LIMIT_REQUESTS=100
 RATE_LIMIT_PERIOD=60
 ```
 
+**Testing Rate Limiting:**
+```bash
+# Run the automated rate limiting test
+python bin/test_rate_limiting.py
+
+# Manual test with curl
+for i in {1..110}; do
+  curl -i http://localhost:8080/health 2>/dev/null | grep -E "HTTP|X-RateLimit"
+done
+```
+
+**Rate Limit Response Headers:**
+```
+X-RateLimit-Limit: 100          # Max requests allowed
+X-RateLimit-Remaining: 47       # Requests remaining in window
+X-RateLimit-Reset: 60           # Window duration in seconds
+```
+
+**When Rate Limited (HTTP 429):**
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "Too many requests. Please try again later."
+}
+```
+
+**Customizing Rate Limits:**
+```bash
+# More restrictive (10 requests per 10 seconds)
+export RATE_LIMIT_REQUESTS=10
+export RATE_LIMIT_PERIOD=10
+
+# More permissive (1000 requests per 5 minutes)
+export RATE_LIMIT_REQUESTS=1000
+export RATE_LIMIT_PERIOD=300
+
+# Disable rate limiting (not recommended for production)
+export RATE_LIMIT_ENABLED=false
+```
+
+**Implementation Details:**
+- Algorithm: Sliding window counter using Redis sorted sets
+- Granularity: Per client IP + endpoint
+- Distributed: Works across multiple API instances
+- Resilient: Fails open if Redis unavailable
+- Monitoring: Tracked in Prometheus metrics (`rate_limit_hits_total`)
+
 ### Scaling
 
 **Horizontal scaling:**

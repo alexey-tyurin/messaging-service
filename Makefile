@@ -26,6 +26,7 @@ help:
 	@echo "  install            - Install Python dependencies"
 	@echo "  test               - Run tests"
 	@echo "  test-flow          - Run message flow tests (Redis queue integration)"
+	@echo "  test-rate-limit    - Test API rate limiting functionality"
 	@echo "  verify-redis-queue - Verify Redis queue integration and async processing"
 	@echo "  lint               - Run linting"
 	@echo "  format             - Format code with black"
@@ -118,6 +119,11 @@ test:
 # Run message flow tests (tests complete flow through Redis queues)
 test-flow:
 	./bin/test_flow.sh
+
+# Test rate limiting
+test-rate-limit:
+	@echo "Testing API rate limiting..."
+	$(PYTHON) ./bin/test_rate_limiting.py
 
 # Verify Redis queue integration
 verify-redis-queue:

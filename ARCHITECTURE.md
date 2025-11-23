@@ -66,10 +66,19 @@ Data Layer:
 - **Technology**: FastAPI with async support
 - **Responsibilities**:
   - Request routing and validation
-  - Rate limiting (using Redis)
+  - **Rate limiting** (using Redis sliding window)
   - Authentication/Authorization
   - Request/Response transformation
   - Circuit breaking for downstream services
+
+**Rate Limiting Implementation**:
+- **Algorithm**: Sliding window counter using Redis sorted sets
+- **Granularity**: Per client IP + endpoint combination
+- **Storage**: Redis sorted sets with automatic expiration
+- **Configuration**: Configurable via environment variables
+- **Headers**: Includes `X-RateLimit-*` headers in all responses
+- **Fail-Safe**: Fails open if Redis is unavailable (allows requests)
+- **Monitoring**: Tracks rate limit hits in Prometheus metrics
 
 ### 2. Message Service
 - **Purpose**: Core messaging logic
@@ -155,9 +164,54 @@ message_events
 ### Redis Usage
 1. **Cache Layer**: Conversation metadata, provider configurations
 2. **Session Store**: Active conversation contexts
-3. **Rate Limiting**: API rate limit counters
+3. **Rate Limiting**: API rate limit counters (sliding window)
 4. **Message Queue**: Redis Streams for async processing
 5. **Distributed Locks**: For coordination across instances
+
+### Rate Limiting Architecture
+
+**Implementation Details**:
+
+```
+Client Request
+     ↓
+Rate Limit Middleware (app/main.py)
+     ↓
+Redis Sliding Window Check
+     ↓
+┌─────────────────────────────┐
+│ Redis Sorted Set            │
+│ Key: rate_limit:{client}:{endpoint}  │
+│ Members: {timestamp: score} │
+│ TTL: window + 1 second      │
+└─────────────────────────────┘
+     ↓
+Decision: Allow or Reject
+     ↓
+Add X-RateLimit-* Headers
+     ↓
+Continue or Return 429
+```
+
+**Algorithm** (Sliding Window Counter):
+1. Remove entries older than time window
+2. Add current request timestamp
+3. Count total requests in window
+4. Compare against limit
+5. Set TTL for automatic cleanup
+
+**Key Features**:
+- **Distributed**: Works across multiple API instances
+- **Accurate**: Sliding window prevents burst at window boundaries
+- **Efficient**: O(log N) time complexity for operations
+- **Self-cleaning**: Automatic expiration prevents memory buildup
+- **Resilient**: Fails open if Redis unavailable
+
+**Default Configuration**:
+- Limit: 100 requests
+- Window: 60 seconds
+- Granularity: Per client IP + endpoint
+- Configurable via environment variables
 
 ## Message Flow (Async Mode - Default)
 
