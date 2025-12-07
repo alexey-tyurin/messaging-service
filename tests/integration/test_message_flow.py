@@ -193,7 +193,7 @@ class MessageFlowTester:
         
         # Step 3: Verify message queued in Redis
         console.print("\n[cyan]Step 3: Checking message queued in Redis...[/cyan]")
-        step3_result = await self._step3_verify_queue(result["queue_name"])
+        step3_result = await self._step3_verify_queue(result["queue_name"], result["message_id"])
         result["steps"]["3_redis_queued"] = step3_result
         
         if not step3_result["success"]:
@@ -288,7 +288,7 @@ class MessageFlowTester:
                 "error": str(e)
             }
     
-    async def _step3_verify_queue(self, queue_name: str) -> Dict[str, Any]:
+    async def _step3_verify_queue(self, queue_name: str, expected_message_id: str) -> Dict[str, Any]:
         """Step 3: Verify message queued in Redis."""
         try:
             # Check queue length
@@ -297,10 +297,43 @@ class MessageFlowTester:
             console.print(f"  ✓ Queue '{queue_name}' exists", style="green")
             console.print(f"  Queue length: {queue_length}")
             
-            # Try to peek at queue (without removing)
-            if queue_length > 0:
-                messages = await self.redis_client.xrange(queue_name, count=5)
-                console.print(f"  Last message ID: {messages[-1][0] if messages else 'N/A'}")
+            if queue_length == 0:
+                console.print(f"  ✗ Queue is empty!", style="red")
+                return {
+                    "success": False,
+                    "error": "Queue is empty"
+                }
+
+            # Get the latest message (use xrevrange for the most recent)
+            messages = await self.redis_client.xrevrange(queue_name, count=1)
+            
+            if messages:
+                stream_id, stream_data = messages[0]
+                console.print(f"  Last stream ID: {stream_id}")
+                
+                # Verify message ID in payload
+                if "data" in stream_data:
+                    try:
+                        payload = json.loads(stream_data["data"])
+                        queued_message_id = payload.get("message_id")
+                        
+                        if queued_message_id == expected_message_id:
+                            console.print(f"  ✓ Message ID match: {queued_message_id}", style="green")
+                        else:
+                            console.print(f"  ✗ Message ID mismatch! Expected: {expected_message_id}, Got: {queued_message_id}", style="red")
+                            return {
+                                "success": False,
+                                "error": f"Message ID mismatch: {queued_message_id} != {expected_message_id}"
+                            }
+                    except json.JSONDecodeError:
+                        console.print(f"  ✗ Failed to decode message payload", style="red")
+                        return {"success": False, "error": "Invalid JSON payload"}
+                else:
+                    console.print(f"  ✗ 'data' field missing in message", style="red")
+                    return {"success": False, "error": "Invalid message format"}
+            else:
+                 console.print(f"  ✗ Could not fetch message from queue", style="red")
+                 return {"success": False, "error": "Could not fetch message"}
             
             return {
                 "success": True,

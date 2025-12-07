@@ -158,17 +158,25 @@ class RedisQueueVerifier:
             print_error("Message was NOT added to Redis queue")
             print_warning("This indicates synchronous processing is enabled")
         
-        # Read the message from queue
+        # Read the message from queue (get latest)
         try:
-            messages = await self.redis_client.xread({queue_name: "0-0"}, count=1)
+            messages = await self.redis_client.xrevrange(queue_name, count=1)
             if messages:
-                stream_name, stream_messages = messages[0]
-                if stream_messages:
-                    msg_id, msg_data = stream_messages[0]
-                    print_success("Message found in queue:")
-                    data_json = json.loads(msg_data.get("data", "{}"))
-                    print(f"  Message ID in queue: {data_json.get('message_id')}")
+                msg_id, msg_data = messages[0]
+                print_success("Message found in queue:")
+                
+                data_json = json.loads(msg_data.get("data", "{}"))
+                queued_msg_id = data_json.get('message_id')
+                expected_msg_id = message.get("id")
+                
+                if queued_msg_id == expected_msg_id:
+                    print_success(f"Message ID match: {queued_msg_id}")
                     print(f"  Scheduled at: {data_json.get('scheduled_at')}")
+                else:
+                    print_error(f"Message ID mismatch! Expected: {expected_msg_id}, Got: {queued_msg_id}")
+            else:
+                 print_error("No messages found in queue")
+                 
         except Exception as e:
             print_warning(f"Could not read from queue: {e}")
         
