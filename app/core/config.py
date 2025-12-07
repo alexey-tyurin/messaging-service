@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = Field(default=False, env="DEBUG")
     environment: str = Field(default="development", env="ENVIRONMENT")
+    test_env: str = Field(default="integration", env="TEST_ENV")  # Test environment: "unit" or "integration"
     
     # API Settings
     api_prefix: str = "/api/v1"

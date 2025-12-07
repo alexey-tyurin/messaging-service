@@ -6,17 +6,17 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from fastapi.testclient import TestClient
 import redis.asyncio as redis
+import os
+from app.core.config import settings
+from app.providers.base import ProviderFactory
 
 from app.main import app
 from app.models.database import Base
 from app.db.session import get_db
-from app.core.config import settings
-from app.providers.base import ProviderFactory
-
-
-# Override settings for testing
-settings.database_url = "sqlite+aiosqlite:///:memory:"
-settings.redis_url = "redis://localhost:6379/15"  # Use different DB for tests
+# Override settings for testing unless in integration mode
+if settings.test_env != "integration":
+    settings.database_url = "sqlite+aiosqlite:///:memory:"
+    settings.redis_url = "redis://localhost:6379/15"  # Use different DB for non-integration tests
 
 
 # Initialize providers once at module load
@@ -36,14 +36,26 @@ def initialize_providers():
 @pytest.fixture(scope="function")
 async def async_db() -> AsyncGenerator[AsyncSession, None]:
     """Create async database session for tests."""
+    # Use configured database URL (memory for unit, real for integration)
+    db_url = str(settings.database_url)
+    
     engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
+        db_url,
         echo=False,
     )
     
     # Create all tables
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        # For integration tests, we need to clean up the real database
+        # For integration tests, we need to clean up the real database
+        if settings.test_env == "integration":
+            # Truncate tables instead of drop/create to avoid invalidating worker's cached statements
+            # Order matters: truncate tables with foreign keys first or use CASCADE
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
+        else:
+            # For unit tests (sqlite memory), create all tables
+            await conn.run_sync(Base.metadata.create_all)
     
     async_session = async_sessionmaker(
         engine,
@@ -66,7 +78,7 @@ async def async_db() -> AsyncGenerator[AsyncSession, None]:
 async def redis_client() -> AsyncGenerator:
     """Create Redis client for tests."""
     client = redis.Redis.from_url(
-        settings.redis_url,
+        str(settings.redis_url),
         decode_responses=True,
     )
     
@@ -87,7 +99,10 @@ def client(async_db: AsyncSession) -> TestClient:
     async def override_get_db():
         yield async_db
     
-    app.dependency_overrides[get_db] = override_get_db
+    # Only override get_db for unit tests (in-memory DB needs shared session)
+    # For integration tests (real DB), app manages its own session/loop
+    if settings.test_env != "integration":
+        app.dependency_overrides[get_db] = override_get_db
     
     with TestClient(app) as test_client:
         yield test_client

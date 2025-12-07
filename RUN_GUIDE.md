@@ -305,6 +305,30 @@ curl http://localhost:8080/api/v1/messages/
 make stop
 ```
 
+### Setup Integration Testing
+**Prerequisites:**
+Before running integration tests, make sure you have the following services running via Docker Compose:
+- PostgreSQL
+- Redis
+
+**Configuration:**
+By default, the `TEST_ENV` variable is set to `integration` in `app/core/config.py`. This means tests will attempt to connect to the real services provided by Docker Compose. If you wish to run unit tests with an in-memory database, you can override this by setting `TEST_ENV=unit`.
+
+**Running Tests:**
+To run integration tests (default behavior):
+```bash
+# Ensure services are up
+docker compose up -d postgres redis
+
+# Run tests
+pytest tests/integration/test_api.py
+```
+
+To run unit tests (using in-memory SQLite):
+```bash
+TEST_ENV=unit pytest tests/unit/
+```
+
 ### Scenario 3: Integration Testing
 
 **Best for:** Testing complete message flow

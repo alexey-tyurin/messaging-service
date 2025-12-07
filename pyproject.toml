@@ -108,6 +108,7 @@ addopts = """
     --maxfail=3
     --tb=short
 """
+pythonpath = "."
 asyncio_mode = "auto"
 markers = [
     "unit: Unit tests",
