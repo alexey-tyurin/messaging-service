@@ -456,7 +456,7 @@ RATE_LIMIT_PERIOD=60
 
 ```bash
 # Run the rate limiting test script
-python bin/test_rate_limiting.py
+python tests/integration/test_rate_limiting.py
 
 # Or test manually with curl
 for i in {1..110}; do

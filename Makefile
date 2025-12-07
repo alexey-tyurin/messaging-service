@@ -123,12 +123,12 @@ test-flow:
 # Test rate limiting
 test-rate-limit:
 	@echo "Testing API rate limiting..."
-	$(PYTHON) ./bin/test_rate_limiting.py
+	$(PYTHON) ./tests/integration/test_rate_limiting.py
 
 # Verify Redis queue integration
 verify-redis-queue:
 	@echo "Verifying Redis queue integration..."
-	$(PYTHON) ./bin/verify_redis_queue.py
+	$(PYTHON) ./tests/integration/verify_redis_queue.py
 
 # Run unit tests
 test-unit:

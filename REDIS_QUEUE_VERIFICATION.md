@@ -177,7 +177,7 @@ make worker
 make verify-redis-queue
 
 # Or directly
-python3 ./bin/verify_redis_queue.py
+python3 tests/integration/verify_redis_queue.py
 ```
 
 ### Expected Output (Async Mode)

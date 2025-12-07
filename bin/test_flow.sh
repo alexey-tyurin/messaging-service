@@ -78,7 +78,7 @@ echo -e "${BLUE}Running message flow tests...${NC}"
 echo ""
 
 # Run the Python test script
-python3 "$(dirname "$0")/test_message_flow.py"
+python3 "tests/integration/test_message_flow.py"
 
 EXIT_CODE=$?
 

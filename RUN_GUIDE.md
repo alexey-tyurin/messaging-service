@@ -891,8 +891,8 @@ RATE_LIMIT_PERIOD=60
 
 **Testing Rate Limiting:**
 ```bash
-# Run the automated rate limiting test
-python bin/test_rate_limiting.py
+# Run the rate limiting test script
+python tests/integration/test_rate_limiting.py
 
 # Manual test with curl
 for i in {1..110}; do
