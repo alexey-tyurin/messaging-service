@@ -78,10 +78,10 @@ messaging-service = "app.main:main"
 message-processor = "app.workers.message_processor:main"
 
 [project.urls]
-Homepage = "https://github.com/Hatch1fy/messaging-service"
-Documentation = "https://github.com/Hatch1fy/messaging-service#readme"
-Repository = "https://github.com/Hatch1fy/messaging-service"
-Issues = "https://github.com/Hatch1fy/messaging-service/issues"
+Homepage = "https://github.com/alexey-tyurin/messaging-service"
+Documentation = "https://github.com/alexey-tyurin/messaging-service#readme"
+Repository = "https://github.com/alexey-tyurin/messaging-service"
+Issues = "https://github.com/alexey-tyurin/messaging-service/issues"
 
 [tool.setuptools.packages.find]
 include = ["app*", "alembic*", "tests*"]
