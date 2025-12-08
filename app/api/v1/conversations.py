@@ -29,9 +29,9 @@ async def create_conversation(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create a new conversation or topic.
+    Create a new conversation or thread.
     
-    - **Topic**: Requires title, type=topic.
+    - **Thread**: Requires title, type=thread.
     - **Direct**: Requires participants, type=direct (default).
     """
     try:

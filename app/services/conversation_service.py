@@ -12,9 +12,12 @@ from sqlalchemy.orm import selectinload
 from app.models.database import (
     Conversation, Message, ConversationStatus, MessageType, ConversationType
 )
-from app.api.v1.models import CreateConversationRequest
 from app.db.redis import redis_manager
 from app.core.observability import get_logger, MetricsCollector, trace_operation
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.api.v1.models import CreateConversationRequest
 
 
 logger = get_logger(__name__)
@@ -29,7 +32,7 @@ class ConversationService:
     @trace_operation("create_conversation")
     async def create_conversation(
         self,
-        request: CreateConversationRequest
+        request: "CreateConversationRequest"
     ) -> Conversation:
         """
         Create a new conversation or topic.
@@ -51,9 +54,9 @@ class ConversationService:
                 if existing:
                     return existing
 
-            # For TOPIC, check if exists by title
-            elif request.type == ConversationType.TOPIC:
-                existing = await self._find_topic(request.title)
+            # For THREAD, check if exists by title
+            elif request.type == ConversationType.THREAD:
+                existing = await self._find_thread(request.title)
                 if existing:
                     return existing
             
@@ -68,8 +71,7 @@ class ConversationService:
             )
             
             self.db.add(conversation)
-            await self.db.commit()
-            await self.db.refresh(conversation)
+            await self.db.flush()
             
             logger.info(
                 "Conversation created",
@@ -80,41 +82,37 @@ class ConversationService:
             return conversation
             
         except Exception as e:
+            logger.error(f"Error creating conversation: {e}")
             await self.db.rollback()
-            logger.error(f"Failed to create conversation: {e}")
             raise
 
     async def _find_direct_conversation(
         self, 
-        p1: str, 
-        p2: str, 
-        channel: MessageType
+        participant_from: str, 
+        participant_to: str, 
+        channel_type: MessageType
     ) -> Optional[Conversation]:
-        """Find existing direct conversation between two participants."""
+        """Find existing direct conversation."""
+        # Normalize participants order for consistent lookup
+        p1, p2 = sorted([participant_from, participant_to])
+        
         query = select(Conversation).where(
             and_(
                 Conversation.type == ConversationType.DIRECT,
-                Conversation.channel_type == channel,
-                or_(
-                    and_(
-                        Conversation.participant_from == p1,
-                        Conversation.participant_to == p2
-                    ),
-                    and_(
-                        Conversation.participant_from == p2,
-                        Conversation.participant_to == p1
-                    )
-                )
+                Conversation.participant_from == p1,
+                Conversation.participant_to == p2,
+                Conversation.channel_type == channel_type,
+                Conversation.status != ConversationStatus.CLOSED
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def _find_topic(self, title: str) -> Optional[Conversation]:
-        """Find existing topic by title."""
+    async def _find_thread(self, title: str) -> Optional[Conversation]:
+        """Find existing thread by title."""
         query = select(Conversation).where(
             and_(
-                Conversation.type == ConversationType.TOPIC,
+                Conversation.type == ConversationType.THREAD,
                 Conversation.title == title,
                 Conversation.status != ConversationStatus.CLOSED
             )

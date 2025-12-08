@@ -108,7 +108,7 @@ class Provider(str, enum.Enum):
 class ConversationType(str, enum.Enum):
     """Conversation type enumeration."""
     DIRECT = "direct"
-    TOPIC = "topic"
+    THREAD = "thread"
 
 class Conversation(Base):
     """

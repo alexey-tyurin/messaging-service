@@ -146,18 +146,19 @@ class CreateConversationRequest(BaseModel):
     participant_from: Optional[str] = Field(None, description="From participant (for DIRECT)")
     participant_to: Optional[str] = Field(None, description="To participant (for DIRECT)")
     channel_type: MessageType = Field(MessageType.EMAIL, description="Channel type")
-    title: Optional[str] = Field(None, description="Conversation title (required for TOPIC)")
+    title: Optional[str] = Field(None, description="Conversation title (required for THREAD)")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Initial metadata")
 
     @model_validator(mode='after')
     def validate_requirements(self):
         """Validate requirements based on conversation type."""
-        if self.type == ConversationType.TOPIC and not self.title:
-            raise ValueError("Title is required for topics")
-        
+        # Validate based on type
         if self.type == ConversationType.DIRECT:
             if not self.participant_from or not self.participant_to:
-                raise ValueError("Participants are required for direct conversations")
+                raise ValueError("Direct conversations require 'participants' or 'participant_from'/'participant_to'")
+        elif self.type == ConversationType.THREAD:
+            if not self.title:
+                raise ValueError("Threads require 'title'")
         
         return self
 

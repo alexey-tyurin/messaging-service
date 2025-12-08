@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Create ConversationType enum
-    conversation_type = sa.Enum('direct', 'topic', name='conversationtype')
+    conversation_type = sa.Enum('direct', 'thread', name='conversationtype')
     conversation_type.create(op.get_bind(), checkfirst=True)
 
     # Update conversations table
@@ -46,5 +46,5 @@ def downgrade() -> None:
     op.drop_column('conversations', 'type')
     
     # Drop enum
-    conversation_type = sa.Enum('direct', 'topic', name='conversationtype')
+    conversation_type = sa.Enum('direct', 'thread', name='conversationtype')
     conversation_type.drop(op.get_bind(), checkfirst=True)

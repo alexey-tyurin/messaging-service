@@ -1,0 +1,171 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.9, pytest-8.0.0, pluggy-1.5.0 -- /Users/alexeytyurin/anaconda3/envs/py311/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service
+configfile: pyproject.toml
+plugins: Faker-22.0.0, opik-0.2.2, anyio-4.9.0, cov-4.1.0, mock-3.12.0, asyncio-0.23.0
+asyncio: mode=Mode.AUTO
+collecting ... collected 7 items
+
+tests/integration/test_threads.py::test_create_thread FAILED             [ 14%]
+tests/integration/test_threads.py::test_create_thread_validation_error PASSED [ 28%]
+tests/integration/test_threads.py::test_create_direct_conversation PASSED [ 42%]
+tests/integration/test_threads.py::test_post_to_thread FAILED            [ 57%]
+tests/integration/test_threads.py::test_threaded_reply FAILED            [ 71%]
+
+=================================== FAILURES ===================================
+______________________________ test_create_thread ______________________________
+tests/integration/test_threads.py:18: in test_create_thread
+    assert response.status_code == status.HTTP_201_CREATED
+E   assert 500 == 201
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   201 = status.HTTP_201_CREATED
+---------------------------- Captured stdout setup -----------------------------
+2025-12-08 13:39:47 [info     ] Registered provider: twilio
+2025-12-08 13:39:47 [info     ] Registered provider: sendgrid
+2025-12-08 13:39:47 [info     ] All providers initialized
+2025-12-08 13:39:48 [info     ] Starting messaging service...
+------------------------------ Captured log call -------------------------------
+ERROR    app.services.conversation_service:conversation_service.py:82 {"event": "Error creating conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.services.conversation_service", "level": "error", "timestamp": "2025-12-08T19:39:48.192709Z", "filename": "conversation_service.py", "func_name": "create_conversation", "lineno": 82}
+ERROR    app.api.v1.conversations:conversations.py:57 {"event": "Failed to create conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.api.v1.conversations", "level": "error", "timestamp": "2025-12-08T19:39:48.237466Z", "filename": "conversations.py", "func_name": "create_conversation", "lineno": 57}
+_____________________________ test_post_to_thread ______________________________
+tests/integration/test_threads.py:51: in test_post_to_thread
+    thread_id = test_create_thread(client)
+tests/integration/test_threads.py:18: in test_create_thread
+    assert response.status_code == status.HTTP_201_CREATED
+E   assert 500 == 201
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   201 = status.HTTP_201_CREATED
+------------------------------ Captured log setup ------------------------------
+WARNING  opentelemetry.trace:__init__.py:521 Overriding of current TracerProvider is not allowed
+------------------------------ Captured log call -------------------------------
+ERROR    app.services.conversation_service:conversation_service.py:82 {"event": "Error creating conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.services.conversation_service", "level": "error", "timestamp": "2025-12-08T19:39:48.969895Z", "filename": "conversation_service.py", "func_name": "create_conversation", "lineno": 82}
+ERROR    app.api.v1.conversations:conversations.py:57 {"event": "Failed to create conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.api.v1.conversations", "level": "error", "timestamp": "2025-12-08T19:39:48.973828Z", "filename": "conversations.py", "func_name": "create_conversation", "lineno": 57}
+_____________________________ test_threaded_reply ______________________________
+tests/integration/test_threads.py:70: in test_threaded_reply
+    parent_msg = test_post_to_thread(client)
+tests/integration/test_threads.py:51: in test_post_to_thread
+    thread_id = test_create_thread(client)
+tests/integration/test_threads.py:18: in test_create_thread
+    assert response.status_code == status.HTTP_201_CREATED
+E   assert 500 == 201
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+E    +  and   201 = status.HTTP_201_CREATED
+------------------------------ Captured log setup ------------------------------
+WARNING  opentelemetry.trace:__init__.py:521 Overriding of current TracerProvider is not allowed
+------------------------------ Captured log call -------------------------------
+ERROR    app.services.conversation_service:conversation_service.py:82 {"event": "Error creating conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.services.conversation_service", "level": "error", "timestamp": "2025-12-08T19:39:49.229553Z", "filename": "conversation_service.py", "func_name": "create_conversation", "lineno": 82}
+ERROR    app.api.v1.conversations:conversations.py:57 {"event": "Failed to create conversation: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.InvalidTextRepresentationError'>: invalid input value for enum conversationtype: \"thread\"\n[SQL: SELECT conversations.id, conversations.participant_from, conversations.participant_to, conversations.channel_type, conversations.status, conversations.type, conversations.title, conversations.last_message_at, conversations.message_count, conversations.unread_count, conversations.meta_data, conversations.created_at, conversations.updated_at \nFROM conversations \nWHERE conversations.type = $1::conversationtype AND conversations.title = $2::VARCHAR AND conversations.status != $3::conversationstatus]\n[parameters: ('thread', 'General Discussion', 'closed')]\n(Background on this error at: https://sqlalche.me/e/20/dbapi)", "logger": "app.api.v1.conversations", "level": "error", "timestamp": "2025-12-08T19:39:49.233559Z", "filename": "conversations.py", "func_name": "create_conversation", "lineno": 57}
+=============================== warnings summary ===============================
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/fields.py:754: 45 warnings
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/fields.py:754: PydanticDeprecatedSince20: Using extra keyword arguments on `Field` is deprecated and will be removed. Use `json_schema_extra` instead. (Extra keys: 'env'). Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    warn(
+
+app/core/config.py:103
+  /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/app/core/config.py:103: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    @validator("database_url", pre=True)
+
+app/core/config.py:116
+  /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/app/core/config.py:116: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    @validator("redis_url", pre=True)
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:272: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/opentelemetry/instrumentation/dependencies.py:4
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/opentelemetry/instrumentation/dependencies.py:4: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    from pkg_resources import (
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:3149
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:3149: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('google')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:3149
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:3149: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('google.cloud')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:2558
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pkg_resources/__init__.py:2558: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('google')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(parent)
+
+app/api/v1/models.py:27
+  /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/app/api/v1/models.py:27: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    @validator("body", "attachments")
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:322
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_config.py:322: UserWarning: Valid config keys have changed in V2:
+  * 'orm_mode' has been renamed to 'from_attributes'
+    warnings.warn(message, UserWarning)
+
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+../../../../../../../anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263
+  /Users/alexeytyurin/anaconda3/envs/py311/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:263: PydanticDeprecatedSince20: `json_encoders` is deprecated. See https://docs.pydantic.dev/2.6/concepts/serialization/#custom-serializers for alternatives. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.6/migration/
+    warnings.warn(
+
+tests/integration/test_threads.py::test_create_thread
+tests/integration/test_threads.py::test_create_thread_validation_error
+tests/integration/test_threads.py::test_create_direct_conversation
+tests/integration/test_threads.py::test_post_to_thread
+tests/integration/test_threads.py::test_threaded_reply
+  /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/app/db/redis.py:66: DeprecationWarning: Call to deprecated close. (Use aclose() instead) -- Deprecated since version 5.0.0.
+    await self.pubsub.close()
+
+tests/integration/test_threads.py::test_create_thread
+tests/integration/test_threads.py::test_create_thread_validation_error
+tests/integration/test_threads.py::test_create_direct_conversation
+tests/integration/test_threads.py::test_post_to_thread
+tests/integration/test_threads.py::test_threaded_reply
+  /Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/app/db/redis.py:68: DeprecationWarning: Call to deprecated close. (Use aclose() instead) -- Deprecated since version 5.0.0.
+    await self.redis_client.close()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform darwin, python 3.11.9-final-0 ----------
+Name                                   Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------
+app/api/legacy_routes.py                  87     61      6      0    28%   35-67, 79-106, 118-132, 144-158, 172-203, 217-262
+app/api/v1/conversations.py               88     61     12      0    27%   41-58, 72-129, 148-188, 202-234, 249-263, 276-312
+app/api/v1/health.py                      98     79     10      0    18%   27-35, 58-134, 149, 160-180, 194-255
+app/api/v1/messages.py                    82     61     10      0    23%   35-68, 81-113, 131-173, 187-225, 238-287
+app/api/v1/models.py                     153     31     32      2    69%   30-33, 39-83, 158, 159->163
+app/api/v1/webhooks.py                    74     57      8      0    21%   29-64, 81-113, 127-150, 163-206
+app/core/config.py                        79      3      6      3    93%   106, 119, 122
+app/core/observability.py                188     72     22      5    60%   152, 163-166, 187, 192, 197-198, 203, 208, 213, 224, 239-243, 257, 263-270, 274-288, 294, 341-371, 384-410, 414-440, 446
+app/db/redis.py                          166    106     30      3    32%   44, 59-61, 65->67, 67->exit, 82-92, 111-123, 135-143, 155-159, 202-205, 223-230, 249-280, 299-304, 322-330, 342-347, 363-384, 394-399
+app/db/session.py                         70     23      6      2    67%   35->45, 65, 69-71, 85-86, 98-106, 110->exit, 112, 121-128
+app/main.py                               87     16      6      2    78%   70, 135-154, 168, 182-184, 241, 253-259, 266-274, 287
+app/models/database.py                   164     10     12      3    89%   35, 39, 43-46, 49-55
+app/providers/base.py                    171     98     24      1    39%   26-29, 35-36, 46-49, 118-189, 197-207, 216, 224-239, 247-252, 296-363, 371-381, 390, 398-413, 421-426, 455-469, 484->483, 514-521
+app/services/conversation_service.py     165    123     46      1    21%   51-52, 57-70, 73-79, 84, 106, 118, 136-214, 240-290, 308-338, 357-386, 404-438
+app/services/message_service.py          263    233     64      0     9%   36, 50-160, 163-167, 180-327, 345-440, 457-545, 568-601, 620-652, 657-663, 667-677, 687-725, 734-740, 744-754
+app/services/webhook_service.py          118     89     20      0    21%   33, 54-132, 151-163, 181-190, 208-220, 238-245, 262-267, 288-328, 352-362, 375-376, 382-411
+app/workers/__init__.py                    2      2      0      0     0%   3-5
+app/workers/message_processor.py         175    175     40      0     0%   5-332
+----------------------------------------------------------------------------------
+TOTAL                                   2251   1300    354     22    38%
+
+8 files skipped due to complete coverage.
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+
+FAIL Required test coverage of 80% not reached. Total coverage: 37.89%
+=========================== short test summary info ============================
+FAILED tests/integration/test_threads.py::test_create_thread - assert 500 == 201
+FAILED tests/integration/test_threads.py::test_post_to_thread - assert 500 ==...
+FAILED tests/integration/test_threads.py::test_threaded_reply - assert 500 ==...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 3 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+=================== 3 failed, 2 passed, 76 warnings in 2.59s ===================
