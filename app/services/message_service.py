@@ -20,6 +20,7 @@ from app.core.observability import get_logger, MetricsCollector, trace_operation
 from app.core.config import settings
 
 
+
 logger = get_logger(__name__)
 
 
@@ -63,21 +64,32 @@ class MessageService:
             conversation = None
             parent_id = message_data.get("parent_id")
             
-            # Handle Threading
+            # Handle Threading via parent_id
             if parent_id:
                 parent_msg = await self.db.get(Message, parent_id)
                 if not parent_msg:
                     raise ValueError(f"Parent message not found: {parent_id}")
                 conversation = await self.db.get(Conversation, parent_msg.conversation_id)
                 if not conversation:
-                     raise ValueError(f"Parent conversation not found") # Should not happen
+                     raise ValueError(f"Parent conversation not found")
             
-            # Handle Direct to Conversation (Topic)
-            elif self._is_valid_uuid(message_data["to"]):
-                conversation = await self.db.get(Conversation, message_data["to"])
-                # If not found, fall back to creation (maybe 'to' just looks like UUID but is a weird address?)
-                # But safer to assume if it matches UUID format and exists, it's a target conversation.
-            
+            # Handle Explicit Conversation Type (e.g. Starting a new Thread)
+            elif message_data.get("conversation_type") == ConversationType.THREAD:
+                # Always create a new conversation for 1:1 Thread
+                from app.services.conversation_service import ConversationService
+                from app.api.v1.models import CreateConversationRequest
+                conv_service = ConversationService(self.db)
+                
+                request = CreateConversationRequest(
+                    type=ConversationType.THREAD,
+                    participant_from=message_data["from"],
+                    participant_to=message_data["to"],
+                    channel_type=message_type,
+                    title=None, 
+                    metadata=message_data.get("metadata", {})
+                )
+                conversation = await conv_service.create_conversation(request)
+
             # Default: Get or Create Direct Conversation
             if not conversation:
                  conversation = await self._get_or_create_conversation(
@@ -549,6 +561,7 @@ class MessageService:
         conversation_id: Optional[str] = None,
         status: Optional[MessageStatus] = None,
         direction: Optional[MessageDirection] = None,
+        parent_id: Optional[str] = None,
         limit: int = 50,
         offset: int = 0
     ) -> tuple[List[Message], int]:
@@ -559,6 +572,7 @@ class MessageService:
             conversation_id: Filter by conversation
             status: Filter by status
             direction: Filter by direction
+            parent_id: Filter by parent message (thread)
             limit: Max results
             offset: Skip results
             
@@ -574,6 +588,8 @@ class MessageService:
                 query = query.where(Message.status == status)
             if direction:
                 query = query.where(Message.direction == direction)
+            if parent_id:
+                query = query.where(Message.parent_id == parent_id)
             
             # Get total count before pagination
             count_query = select(func.count()).select_from(Message)
@@ -583,6 +599,8 @@ class MessageService:
                 count_query = count_query.where(Message.status == status)
             if direction:
                 count_query = count_query.where(Message.direction == direction)
+            if parent_id:
+                count_query = count_query.where(Message.parent_id == parent_id)
             
             count_result = await self.db.execute(count_query)
             total = count_result.scalar() or 0
@@ -696,7 +714,8 @@ class MessageService:
                         Conversation.participant_to == from_address
                     )
                 ),
-                Conversation.channel_type == channel_type
+                Conversation.channel_type == channel_type,
+                Conversation.type == ConversationType.DIRECT
             ).order_by(Conversation.created_at.desc())
         )
         
@@ -709,6 +728,7 @@ class MessageService:
                 participant_from=from_address,
                 participant_to=to_address,
                 channel_type=channel_type,
+                type=ConversationType.DIRECT,
                 status=ConversationStatus.ACTIVE,
                 meta_data={}
             )

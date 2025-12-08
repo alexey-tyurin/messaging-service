@@ -23,6 +23,7 @@ class SendMessageRequest(BaseModel):
     attachments: Optional[List[str]] = Field(default=[], description="List of attachment URLs")
     metadata: Optional[Dict[str, Any]] = Field(default={}, description="Additional metadata")
     parent_id: Optional[str] = Field(None, description="Parent message ID for threading")
+    conversation_type: Optional[ConversationType] = Field(None, description="Conversation type (e.g. THREAD)")
     
     @validator("body", "attachments")
     def validate_content(cls, v, values):
@@ -62,15 +63,8 @@ class SendMessageRequest(BaseModel):
             is_sms_mms = True
         elif type_str == "email":
             if to_addr and not email_pattern.match(to_addr):
-                # Allow non-email TO if it's a UUID (Topic ID) - This logic might need refinement in service layer
-                # For now, strict validation might be hindrance for Topics if we reuse this request.
-                # Assuming 'to' is still address for direct, but for topics it might be handled differently?
-                # Actually, standard SendMessage might use conversation_id or similar.
-                # If 'to' is a Topic ID, it won't match email.
-                # Let's relax validation if it looks like a UUID.
-                uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-                if not uuid_pattern.match(to_addr):
-                     raise ValueError("Recipient must be a valid email address or Topic UUID")
+                # STRICT 1:1 Threading: Recipients must be valid addresses. No UUIDs.
+                raise ValueError("Recipient must be a valid email address")
             if from_addr and not email_pattern.match(from_addr):
                 raise ValueError("Sender must be a valid email address")
 
@@ -153,12 +147,9 @@ class CreateConversationRequest(BaseModel):
     def validate_requirements(self):
         """Validate requirements based on conversation type."""
         # Validate based on type
-        if self.type == ConversationType.DIRECT:
+        if self.type == ConversationType.DIRECT or self.type == ConversationType.THREAD:
             if not self.participant_from or not self.participant_to:
-                raise ValueError("Direct conversations require 'participants' or 'participant_from'/'participant_to'")
-        elif self.type == ConversationType.THREAD:
-            if not self.title:
-                raise ValueError("Threads require 'title'")
+                raise ValueError(f"{self.type.value} conversations require 'participant_from' and 'participant_to'")
         
         return self
 

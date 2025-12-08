@@ -45,6 +45,7 @@ async def send_message(
         return MessageResponse(
             id=str(message.id),
             conversation_id=str(message.conversation_id),
+            parent_id=str(message.parent_id) if message.parent_id else None,
             provider=message.provider.value if message.provider else None,
             provider_message_id=message.provider_message_id,
             direction=message.direction.value,
@@ -90,6 +91,7 @@ async def get_message(
         return MessageResponse(
             id=str(message.id),
             conversation_id=str(message.conversation_id),
+            parent_id=str(message.parent_id) if message.parent_id else None,
             provider=message.provider.value if message.provider else None,
             provider_message_id=message.provider_message_id,
             direction=message.direction.value,
@@ -116,6 +118,7 @@ async def get_message(
 @router.get("/", response_model=MessageListResponse)
 async def list_messages(
     conversation_id: Optional[UUID] = Query(None, description="Filter by conversation ID"),
+    parent_id: Optional[UUID] = Query(None, description="Filter by parent message ID"),
     status: Optional[MessageStatus] = Query(None, description="Filter by status"),
     direction: Optional[MessageDirection] = Query(None, description="Filter by direction"),
     limit: int = Query(50, ge=1, le=100, description="Number of items to return"),
@@ -125,7 +128,7 @@ async def list_messages(
     """
     List messages with optional filters.
     
-    Supports filtering by conversation, status, and direction.
+    Supports filtering by conversation, status, direction, and parent message.
     Results are paginated and ordered by creation time (newest first).
     """
     try:
@@ -133,6 +136,7 @@ async def list_messages(
         
         messages, total = await service.list_messages(
             conversation_id=str(conversation_id) if conversation_id else None,
+            parent_id=str(parent_id) if parent_id else None,
             status=status,
             direction=direction,
             limit=limit,
@@ -144,7 +148,9 @@ async def list_messages(
         for msg in messages:
             message_responses.append(MessageResponse(
                 id=str(msg.id),
+
                 conversation_id=str(msg.conversation_id),
+                parent_id=str(msg.parent_id) if msg.parent_id else None,
                 provider=msg.provider.value if msg.provider else None,
                 provider_message_id=msg.provider_message_id,
                 direction=msg.direction.value,
@@ -202,6 +208,7 @@ async def update_message_status(
         return MessageResponse(
             id=str(message.id),
             conversation_id=str(message.conversation_id),
+            parent_id=str(message.parent_id) if message.parent_id else None,
             provider=message.provider.value if message.provider else None,
             provider_message_id=message.provider_message_id,
             direction=message.direction.value,
@@ -264,6 +271,7 @@ async def retry_message(
         return MessageResponse(
             id=str(message.id),
             conversation_id=str(message.conversation_id),
+            parent_id=str(message.parent_id) if message.parent_id else None,
             provider=message.provider.value if message.provider else None,
             provider_message_id=message.provider_message_id,
             direction=message.direction.value,

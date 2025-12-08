@@ -1,5 +1,5 @@
 """
-Integration tests for Threads.
+Integration tests for 1:1 Threads.
 """
 
 import pytest
@@ -7,140 +7,141 @@ from fastapi import status
 import uuid
 import json
 
-def test_create_thread(client):
-    """Test creating a thread conversation."""
-    data = {
-        "type": "thread",
-        "title": "General Discussion",
-        "channel_type": "email"
-    }
-    response = client.post("/api/v1/conversations/", json=data)
-    assert response.status_code == status.HTTP_201_CREATED
-    r_data = response.json()
-    assert r_data["type"] == "thread"
-    assert r_data["title"] == "General Discussion"
-    return r_data["id"]
-
-def test_create_thread_validation_error(client):
-    """Test creating a thread without title should fail."""
-    data = {
-        "type": "thread",
-        "channel_type": "email"
-        # Missing title
-    }
-    response = client.post("/api/v1/conversations/", json=data)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-def test_create_direct_conversation(client):
-    """Test creating a direct conversation explicitly."""
-    data = {
-        "type": "direct",
-        "participant_from": "user1@example.com",
-        "participant_to": "user2@example.com",
-        "channel_type": "email"
-    }
-    response = client.post("/api/v1/conversations/", json=data)
-    assert response.status_code == status.HTTP_201_CREATED
-    r_data = response.json()
-    assert r_data["type"] == "direct"
-    assert r_data["participant_from"] == "user1@example.com"
-
-def test_post_to_thread(client):
-    """Test posting a message to a thread."""
-    # First create thread
-    thread_id = test_create_thread(client)
-    
-    # Post message using Thread ID as 'to' address
+def test_start_thread_via_message(client):
+    """Test starting a thread by sending a message with conversation_type=THREAD."""
     msg_data = {
-        "from": "user@example.com",
-        "to": thread_id,
+        "from": "user1@example.com",
+        "to": "user2@example.com",
         "type": "email",
-        "body": "Hello Thread!"
+        "body": "Starting a new thread",
+        "conversation_type": "thread"
     }
     response = client.post("/api/v1/messages/send", json=msg_data)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert data["conversation_id"] == thread_id
-    assert data["to"] == thread_id
+    
+    assert data["type"] == "email"
+    conversation_id = data["conversation_id"]
+    assert conversation_id is not None
+    
+    # Verify conversation type
+    conv_resp = client.get(f"/api/v1/conversations/{conversation_id}")
+    assert conv_resp.status_code == status.HTTP_200_OK
+    conv_data = conv_resp.json()
+    assert conv_data["type"] == "thread"
+    assert conv_data["participant_from"] == "user1@example.com"
+    assert conv_data["participant_to"] == "user2@example.com"
+    
     return data
 
-def test_threaded_reply(client):
-    """Test replying to a message (threading)."""
-    # Create parent message in a thread
-    parent_msg = test_post_to_thread(client)
-    parent_id = parent_msg["id"]
-    thread_id = parent_msg["conversation_id"]
-    
-    # Reply to that message
-    reply_data = {
-        "from": "another@example.com",
-        "to": thread_id,
+def test_threaded_reply_flow(client):
+    """Test full thread flow: Start -> Reply -> Reply back."""
+    # 1. Start Thread
+    start_msg_data = {
+        "from": "alice@example.com",
+        "to": "bob@example.com",
         "type": "email",
-        "body": "This is a reply to the thread message",
-        "parent_id": parent_id
+        "body": "Thread root",
+        "conversation_type": "thread"
     }
-    response = client.post("/api/v1/messages/send", json=reply_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["parent_id"] == parent_id
-    assert data["conversation_id"] == thread_id
-
-    # Verify hierarchy via get conversation
-    resp = client.get(f"/api/v1/conversations/{thread_id}?include_messages=true")
-    assert resp.status_code == status.HTTP_200_OK
-    conv_data = resp.json()
+    resp1 = client.post("/api/v1/messages/send", json=start_msg_data)
+    assert resp1.status_code == status.HTTP_201_CREATED
+    msg1 = resp1.json()
+    thread_id = msg1["conversation_id"]
     
-    print(f"DEBUG: Conversation Data: {json.dumps(conv_data, indent=2)}")
-    
-    messages = conv_data["messages"]
-    
-    # Find the reply
-    reply_msg = next(m for m in messages if m["id"] == data["id"])
-    assert reply_msg["parent_id"] == parent_id
-
-def test_list_conversations_filter_by_type(client):
-    """Test filtering conversations by type."""
-    # Create thread
-    test_create_thread(client)
-    # Create direct
-    test_create_direct_conversation(client)
-    
-    # Filter threads
-    resp = client.get("/api/v1/conversations/?type=thread")
-    assert resp.status_code == status.HTTP_200_OK
-    threads = resp.json()["conversations"]
-    
-    print(f"DEBUG: Threads: {json.dumps(threads, indent=2)}")
-    
-    assert len(threads) > 0
-    assert all(c["type"] == "thread" for c in threads)
-    
-    # Filter direct
-    resp = client.get("/api/v1/conversations/?type=direct")
-    assert resp.status_code == status.HTTP_200_OK
-    directs = resp.json()["conversations"]
-    
-    print(f"DEBUG: Directs: {json.dumps(directs, indent=2)}")
-    
-    assert len(directs) > 0
-    assert all(c["type"] == "direct" for c in directs)
-
-
-def test_invalid_parent_id(client):
-    """Test replying to non-existent message."""
-    test_create_thread(client)
-    
-    fake_id = str(uuid.uuid4())
-    reply_data = {
-        "from": "user@example.com",
-        "to": "user2@example.com", # Doesn't matter much if parent check fails first
+    # 2. Reply (Bob -> Alice)
+    reply1_data = {
+        "from": "bob@example.com",
+        "to": "alice@example.com",
         "type": "email",
-        "body": "Reply to nothing",
-        "parent_id": fake_id
+        "body": "First reply",
+        "parent_id": msg1["id"]
     }
-    # Should probably be 400 or 422, or 500 if unhandled. 
-    # Current implementation raises ValueError which triggers 422 in FastAPI usually if pydantic, 
-    # but inside service it raises ValueError. 
-    # app/api/v1/messages.py catches ValueError and returns 422.
-    response = client.post("/api/v1/messages/send", json=reply_data)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    resp2 = client.post("/api/v1/messages/send", json=reply1_data)
+    assert resp2.status_code == status.HTTP_201_CREATED
+    msg2 = resp2.json()
+    
+    assert msg2["conversation_id"] == thread_id
+    assert msg2["parent_id"] == msg1["id"]
+    
+    # 3. Reply to Reply (Alice -> Bob)
+    reply2_data = {
+        "from": "alice@example.com",
+        "to": "bob@example.com",
+        "type": "email",
+        "body": "Second reply",
+        "parent_id": msg2["id"] # Threading off the last message? Or always root? Use case says "User 2 reply to reply 2 (that is reply 3, parent message is reply 2)"
+    }
+    resp3 = client.post("/api/v1/messages/send", json=reply2_data)
+    assert resp3.status_code == status.HTTP_201_CREATED
+    msg3 = resp3.json()
+    
+    assert msg3["conversation_id"] == thread_id
+    assert msg3["parent_id"] == msg2["id"]
+    
+    # 4. Fetch messages by parent_id (Get replies to Root)
+    # The requirement says "Get / add parent_id => Get all messages for this parent id". 
+    # If I filter by parent_id=msg1['id'], I should see msg2.
+    resp_list = client.get(f"/api/v1/messages/?parent_id={msg1['id']}")
+    assert resp_list.status_code == status.HTTP_200_OK
+    list_data = resp_list.json()
+    messages = list_data["messages"]
+    
+    # Should contain msg2
+    assert any(m["id"] == msg2["id"] for m in messages)
+    
+    # Test strict addressing validation (No UUIDs allowed in 'to')
+    invalid_data = {
+        "from": "alice@example.com",
+        "to": str(uuid.uuid4()), # UUID
+        "type": "email",
+        "body": "Should fail",
+        "conversation_type": "thread"
+    }
+    resp_fail = client.post("/api/v1/messages/send", json=invalid_data)
+    # Expect 422 Validation Error
+    assert resp_fail.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+def test_start_multiple_threads(client):
+    """Test that starting multiple threads creates NEW conversations."""
+    # Thread 1
+    resp1 = client.post("/api/v1/messages/send", json={
+        "from": "u1@e.com", "to": "u2@e.com", "type": "email", "body": "T1", "conversation_type": "thread"
+    })
+    assert resp1.status_code == status.HTTP_201_CREATED
+    id1 = resp1.json()["conversation_id"]
+    
+    # Thread 2 (same pair)
+    resp2 = client.post("/api/v1/messages/send", json={
+        "from": "u1@e.com", "to": "u2@e.com", "type": "email", "body": "T2", "conversation_type": "thread"
+    })
+    assert resp2.status_code == status.HTTP_201_CREATED
+    id2 = resp2.json()["conversation_id"]
+    
+    assert id1 != id2
+
+def test_thread_creation_precedence(client):
+    """
+    Test that if BOTH conversation_type='thread' AND parent_id are present,
+    we link to the parent conversation instead of creating a new one.
+    """
+    # 1. Start a thread
+    resp1 = client.post("/api/v1/messages/send", json={
+        "from": "u1@e.com", "to": "u2@e.com", "type": "email", "body": "Root", "conversation_type": "thread"
+    })
+    data1 = resp1.json()
+    thread_id = data1["conversation_id"]
+    msg1_id = data1["id"]
+    
+    # 2. Reply with explicit conversation_type='thread' (which should be ignored in favor of parent_id)
+    resp2 = client.post("/api/v1/messages/send", json={
+        "from": "u2@e.com", "to": "u1@e.com", "type": "email", "body": "Reply", 
+        "conversation_type": "thread",
+        "parent_id": msg1_id
+    })
+    assert resp2.status_code == status.HTTP_201_CREATED
+    data2 = resp2.json()
+    
+    # Assert it joined the EXISTING thread
+    assert data2["conversation_id"] == thread_id
+    assert data2["parent_id"] == msg1_id

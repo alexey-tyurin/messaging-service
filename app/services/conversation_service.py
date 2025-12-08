@@ -54,11 +54,7 @@ class ConversationService:
                 if existing:
                     return existing
 
-            # For THREAD, check if exists by title
-            elif request.type == ConversationType.THREAD:
-                existing = await self._find_thread(request.title)
-                if existing:
-                    return existing
+
             
             conversation = Conversation(
                 type=request.type,
@@ -108,17 +104,7 @@ class ConversationService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def _find_thread(self, title: str) -> Optional[Conversation]:
-        """Find existing thread by title."""
-        query = select(Conversation).where(
-            and_(
-                Conversation.type == ConversationType.THREAD,
-                Conversation.title == title,
-                Conversation.status != ConversationStatus.CLOSED
-            )
-        )
-        result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+
     
     @trace_operation("get_conversation")
     async def get_conversation(
