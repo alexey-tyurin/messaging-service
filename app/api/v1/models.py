@@ -2,9 +2,10 @@
 Pydantic models for API requests and responses.
 """
 
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import re
 from enum import Enum
 
 
@@ -55,6 +56,41 @@ class SendMessageRequest(BaseModel):
             if "body" not in values or not values["body"]:
                 raise ValueError("Message must have either body or attachments")
         return v
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_recipient_format(cls, values: Any) -> Any:
+        """Validate recipient address based on message type."""
+        if not isinstance(values, dict):
+            return values
+            
+        msg_type = values.get("type")
+        to_addr = values.get("to")
+        
+        if not to_addr:
+            return values
+
+        # E.164-ish phone number: + followed by 1-15 digits.
+        phone_pattern = re.compile(r"^\+?[1-9]\d{1,14}$")
+        # Simple email check
+        email_pattern = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+
+        # Check for string "sms" or enum value
+        is_sms_mms = False
+        if msg_type:
+            # Handle both raw string and Enum
+            type_str = getattr(msg_type, "value", msg_type) if hasattr(msg_type, "value") else str(msg_type)
+            if type_str in ["sms", "mms"]:
+                is_sms_mms = True
+            elif type_str == "email":
+                if not email_pattern.match(to_addr):
+                    raise ValueError("Recipient must be a valid email address")
+
+        if is_sms_mms:
+             if not phone_pattern.match(to_addr):
+                 raise ValueError("Recipient must be a valid phone number for SMS/MMS")
+        
+        return values
     
     class Config:
         populate_by_name = True

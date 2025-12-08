@@ -62,7 +62,7 @@ async def send_message(
         )
         
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to send message: {e}")
         raise HTTPException(status_code=500, detail="Failed to send message")

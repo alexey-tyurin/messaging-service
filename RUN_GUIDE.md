@@ -311,6 +311,14 @@ Before running integration tests, make sure you have the following services runn
 - PostgreSQL
 - Redis
 
+For full integration verification (ensuring the background worker processes messages), you should also run the service and worker:
+```bash
+# Start API
+make run-bg
+# Start Worker
+make worker &
+```
+
 **Configuration:**
 By default, the `TEST_ENV` variable is set to `integration` in `app/core/config.py`. This means tests will attempt to connect to the real services provided by Docker Compose. If you wish to run unit tests with an in-memory database, you can override this by setting `TEST_ENV=unit`.
 
