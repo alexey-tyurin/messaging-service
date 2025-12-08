@@ -103,13 +103,13 @@ def test_messages_validation_extended(client):
     })
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    # MMS with invalid attachment URL (Pydantic List[str] doesn't validate URL format strict unless HttpUrl used)
-    # But if we want to ensure strictness, we might need a custom validator for attachments too.
-    # The current requirement focused on "to" field.
-    # We'll leave this check as permissive (201) or 422 if we implemented it, 
-    # but since we didn't add attachment URL validation, let's stick to what we know or what happens.
-    # Actually, let's keep it 201 as we didn't add URL validation, OR if previous test passed with 201.
-    pass
+    # Missing Type Field - Should now be 422
+    response = client.post("/api/v1/messages/send", json={
+        "from": "+15551234567",
+        "to": "+15559876543",
+        "body": "No Type"
+    })
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 def test_messages_get_by_id(client, sample_message_data):
     """Test retrieving a message by ID."""

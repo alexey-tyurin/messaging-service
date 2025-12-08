@@ -44,7 +44,7 @@ class SendMessageRequest(BaseModel):
     """Request model for sending a message."""
     from_: str = Field(..., alias="from", description="Sender address")
     to: str = Field(..., description="Recipient address")
-    type: Optional[MessageType] = Field(None, description="Message type (auto-detected if not provided)")
+    type: MessageType = Field(..., description="Message type")
     body: Optional[str] = Field(None, description="Message body")
     attachments: Optional[List[str]] = Field(default=[], description="List of attachment URLs")
     metadata: Optional[Dict[str, Any]] = Field(default={}, description="Additional metadata")
@@ -59,15 +59,18 @@ class SendMessageRequest(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def validate_recipient_format(cls, values: Any) -> Any:
-        """Validate recipient address based on message type."""
+    def validate_addresses(cls, values: Any) -> Any:
+        """Validate sender and recipient addresses based on message type."""
         if not isinstance(values, dict):
             return values
             
         msg_type = values.get("type")
         to_addr = values.get("to")
+        from_addr = values.get("from")
         
-        if not to_addr:
+        # If type is missing, basic Pydantic validation will catch it later, 
+        # but we can't strict validate format without knowing type.
+        if not msg_type:
             return values
 
         # E.164-ish phone number: + followed by 1-15 digits.
@@ -77,18 +80,22 @@ class SendMessageRequest(BaseModel):
 
         # Check for string "sms" or enum value
         is_sms_mms = False
-        if msg_type:
-            # Handle both raw string and Enum
-            type_str = getattr(msg_type, "value", msg_type) if hasattr(msg_type, "value") else str(msg_type)
-            if type_str in ["sms", "mms"]:
-                is_sms_mms = True
-            elif type_str == "email":
-                if not email_pattern.match(to_addr):
-                    raise ValueError("Recipient must be a valid email address")
+        # Handle both raw string and Enum
+        type_str = getattr(msg_type, "value", msg_type) if hasattr(msg_type, "value") else str(msg_type)
+        
+        if type_str in ["sms", "mms"]:
+            is_sms_mms = True
+        elif type_str == "email":
+            if to_addr and not email_pattern.match(to_addr):
+                raise ValueError("Recipient must be a valid email address")
+            if from_addr and not email_pattern.match(from_addr):
+                raise ValueError("Sender must be a valid email address")
 
         if is_sms_mms:
-             if not phone_pattern.match(to_addr):
+             if to_addr and not phone_pattern.match(to_addr):
                  raise ValueError("Recipient must be a valid phone number for SMS/MMS")
+             if from_addr and not phone_pattern.match(from_addr):
+                 raise ValueError("Sender must be a valid phone number for SMS/MMS")
         
         return values
     

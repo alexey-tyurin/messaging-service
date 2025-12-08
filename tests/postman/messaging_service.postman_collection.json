@@ -1,0 +1,557 @@
+{
+    "info": {
+        "_postman_id": "b3044177-33d3-455b-bf42-995f5439ac7d",
+        "name": "Messaging Service",
+        "description": "Postman collection for Messaging Service API, generated from regression tests.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Messages",
+            "item": [
+                {
+                    "name": "Send SMS",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.id) {",
+                                    "    pm.environment.set(\"messageId\", jsonData.id);",
+                                    "}",
+                                    "if (jsonData.conversation_id) {",
+                                    "    pm.environment.set(\"conversationId\", jsonData.conversation_id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from\": \"+15551234567\",\n    \"to\": \"+15559876543\",\n    \"type\": \"sms\",\n    \"body\": \"Test message from Postman\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "send"
+                            ]
+                        },
+                        "description": "Send a standard SMS message. Saves messageId and conversationId to environment variables."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Email",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from\": \"sender@example.com\",\n    \"to\": \"recipient@example.com\",\n    \"type\": \"email\",\n    \"body\": \"<p>Test email from Postman</p>\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "send"
+                            ]
+                        },
+                        "description": "Send an email message."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message - Validation Error (Empty)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "send"
+                            ]
+                        },
+                        "description": "Expect 422 Unprocessable Entity."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message - Missing Type",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from\": \"+15551234567\",\n    \"to\": \"+15559876543\",\n    \"body\": \"Test message from Postman\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "send"
+                            ]
+                        },
+                        "description": "Expect 422 for missing 'type' field."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message - Invalid Phone",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"from\": \"invalid\",\n    \"to\": \"+15559876543\",\n    \"body\": \"test\",\n    \"type\": \"sms\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "send"
+                            ]
+                        },
+                        "description": "Expect 422 for invalid 'from' number."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Message",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/{{messageId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "{{messageId}}"
+                            ]
+                        },
+                        "description": "Retrieve message details by ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages?limit=5",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "5"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Retry Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/{{messageId}}/retry",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "{{messageId}}",
+                                "retry"
+                            ]
+                        },
+                        "description": "Retry a failed message. Returns 400 if message is not in failed state."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Message Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"delivered\",\n    \"metadata\": {\n        \"provider_response\": \"ok\"\n    }\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/messages/{{messageId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "messages",
+                                "{{messageId}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Manually update message status."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Conversations",
+            "item": [
+                {
+                    "name": "Get Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/conversations/{{conversationId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "conversations",
+                                "{{conversationId}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Conversation",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Updated Title from Postman\",\n    \"metadata\": {\n        \"source\": \"postman\"\n    }\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/conversations/{{conversationId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "conversations",
+                                "{{conversationId}}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Conversations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/conversations?limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "conversations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Search Conversations",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"1234\",\n    \"limit\": 10\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/conversations/search",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "conversations",
+                                "search"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Conversation",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/conversations/{{conversationId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "conversations",
+                                "{{conversationId}}"
+                            ]
+                        },
+                        "description": "Soft delete conversation."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Webhooks",
+            "item": [
+                {
+                    "name": "Twilio Webhook",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"messaging_provider_id\": \"test_provider\",\n    \"from\": \"+15551234567\",\n    \"to\": \"+15559876543\",\n    \"type\": \"sms\",\n    \"body\": \"Webhook Test\",\n    \"timestamp\": \"2024-01-01T12:00:00Z\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/webhooks/twilio",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "webhooks",
+                                "twilio"
+                            ]
+                        },
+                        "description": "Simulate incoming Twilio webhook."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Health Probes",
+            "item": [
+                {
+                    "name": "Health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Ready",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/ready",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "ready"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Live",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/live",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "live"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Startup",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/startup",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "startup"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Dependencies",
+            "item": [
+                {
+                    "name": "Check Dependencies",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/dependencies",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "dependencies"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "messageId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "conversationId",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}
