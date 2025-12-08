@@ -19,16 +19,15 @@ if settings.test_env != "integration":
     settings.redis_url = "redis://localhost:6379/15"  # Use different DB for non-integration tests
 
 
-# Initialize providers once at module load
-@pytest.fixture(scope="session", autouse=True)
-def initialize_providers():
-    """Initialize providers for all tests synchronously."""
-    # Use asyncio.run to initialize providers
-    asyncio.run(ProviderFactory.init_providers())
+# Initialize providers for each test to ensure they use the correct event loop
+@pytest.fixture(scope="function", autouse=True)
+async def initialize_providers():
+    """Initialize providers for all tests."""
+    await ProviderFactory.init_providers()
     yield
     # Clean up providers
     try:
-        asyncio.run(ProviderFactory.close_providers())
+        await ProviderFactory.close_providers()
     except Exception:
         pass
 
