@@ -9,45 +9,20 @@ import re
 from enum import Enum
 
 
-class MessageType(str, Enum):
-    """Message type enumeration."""
-    SMS = "sms"
-    MMS = "mms"
-    EMAIL = "email"
-
-
-class MessageDirection(str, Enum):
-    """Message direction enumeration."""
-    INBOUND = "inbound"
-    OUTBOUND = "outbound"
-
-
-class MessageStatus(str, Enum):
-    """Message status enumeration."""
-    PENDING = "pending"
-    QUEUED = "queued"
-    SENDING = "sending"
-    SENT = "sent"
-    DELIVERED = "delivered"
-    FAILED = "failed"
-    RETRY = "retry"
-
-
-class ConversationStatus(str, Enum):
-    """Conversation status enumeration."""
-    ACTIVE = "active"
-    ARCHIVED = "archived"
-    CLOSED = "closed"
+from app.models.database import (
+    MessageType, MessageDirection, MessageStatus, ConversationStatus, ConversationType
+)
 
 
 class SendMessageRequest(BaseModel):
     """Request model for sending a message."""
     from_: str = Field(..., alias="from", description="Sender address")
-    to: str = Field(..., description="Recipient address")
+    to: str = Field(..., description="Recipient address (or TOPIC ID/Name)")
     type: MessageType = Field(..., description="Message type")
     body: Optional[str] = Field(None, description="Message body")
     attachments: Optional[List[str]] = Field(default=[], description="List of attachment URLs")
     metadata: Optional[Dict[str, Any]] = Field(default={}, description="Additional metadata")
+    parent_id: Optional[str] = Field(None, description="Parent message ID for threading")
     
     @validator("body", "attachments")
     def validate_content(cls, v, values):
@@ -87,7 +62,15 @@ class SendMessageRequest(BaseModel):
             is_sms_mms = True
         elif type_str == "email":
             if to_addr and not email_pattern.match(to_addr):
-                raise ValueError("Recipient must be a valid email address")
+                # Allow non-email TO if it's a UUID (Topic ID) - This logic might need refinement in service layer
+                # For now, strict validation might be hindrance for Topics if we reuse this request.
+                # Assuming 'to' is still address for direct, but for topics it might be handled differently?
+                # Actually, standard SendMessage might use conversation_id or similar.
+                # If 'to' is a Topic ID, it won't match email.
+                # Let's relax validation if it looks like a UUID.
+                uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+                if not uuid_pattern.match(to_addr):
+                     raise ValueError("Recipient must be a valid email address or Topic UUID")
             if from_addr and not email_pattern.match(from_addr):
                 raise ValueError("Sender must be a valid email address")
 
@@ -107,6 +90,7 @@ class MessageResponse(BaseModel):
     """Response model for a message."""
     id: str = Field(..., description="Message ID")
     conversation_id: str = Field(..., description="Conversation ID")
+    parent_id: Optional[str] = Field(None, description="Parent message ID")
     provider: Optional[str] = Field(None, description="Provider used")
     provider_message_id: Optional[str] = Field(None, description="Provider's message ID")
     direction: MessageDirection = Field(..., description="Message direction")
@@ -124,6 +108,8 @@ class MessageResponse(BaseModel):
     
     class Config:
         populate_by_name = True
+        from_attributes = True
+        orm_mode = True
         json_encoders = {
             datetime: lambda v: v.isoformat() if v else None
         }
@@ -132,9 +118,10 @@ class MessageResponse(BaseModel):
 class ConversationResponse(BaseModel):
     """Response model for a conversation."""
     id: str = Field(..., description="Conversation ID")
-    participant_from: str = Field(..., description="From participant")
-    participant_to: str = Field(..., description="To participant")
+    participant_from: Optional[str] = Field(None, description="From participant")
+    participant_to: Optional[str] = Field(None, description="To participant")
     channel_type: MessageType = Field(..., description="Channel type")
+    type: ConversationType = Field(ConversationType.DIRECT, description="Conversation type")
     status: ConversationStatus = Field(..., description="Conversation status")
     title: Optional[str] = Field(None, description="Conversation title")
     last_message_at: Optional[datetime] = Field(None, description="Last message timestamp")
@@ -146,9 +133,33 @@ class ConversationResponse(BaseModel):
     messages: Optional[List[MessageResponse]] = Field(None, description="Messages in conversation")
     
     class Config:
+        from_attributes = True
+        orm_mode = True
         json_encoders = {
             datetime: lambda v: v.isoformat() if v else None
         }
+
+
+class CreateConversationRequest(BaseModel):
+    """Request model for creating a conversation."""
+    type: ConversationType = Field(ConversationType.DIRECT, description="Conversation type")
+    participant_from: Optional[str] = Field(None, description="From participant (for DIRECT)")
+    participant_to: Optional[str] = Field(None, description="To participant (for DIRECT)")
+    channel_type: MessageType = Field(MessageType.EMAIL, description="Channel type")
+    title: Optional[str] = Field(None, description="Conversation title (required for TOPIC)")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Initial metadata")
+
+    @model_validator(mode='after')
+    def validate_requirements(self):
+        """Validate requirements based on conversation type."""
+        if self.type == ConversationType.TOPIC and not self.title:
+            raise ValueError("Title is required for topics")
+        
+        if self.type == ConversationType.DIRECT:
+            if not self.participant_from or not self.participant_to:
+                raise ValueError("Participants are required for direct conversations")
+        
+        return self
 
 
 class ConversationUpdateRequest(BaseModel):

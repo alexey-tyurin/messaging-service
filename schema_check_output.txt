@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/tests/check_schema.py", line 6, in <module>
+    from app.db.session import async_session
+ModuleNotFoundError: No module named 'app'

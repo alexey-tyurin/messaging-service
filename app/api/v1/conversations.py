@@ -9,17 +9,53 @@ from uuid import UUID
 
 from app.api.v1.models import (
     ConversationResponse, ConversationListResponse, ConversationUpdateRequest,
-    ConversationSearchRequest, ConversationStatisticsResponse, MessageResponse
+    ConversationSearchRequest, ConversationStatisticsResponse, MessageResponse,
+    CreateConversationRequest
 )
 from app.services.conversation_service import ConversationService
 from app.services.message_service import MessageService
 from app.db.session import get_db
-from app.models.database import ConversationStatus, MessageType
+from app.models.database import ConversationStatus, MessageType, ConversationType
 from app.core.observability import get_logger
 
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+@router.post("/", response_model=ConversationResponse, status_code=201)
+async def create_conversation(
+    request: CreateConversationRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new conversation or topic.
+    
+    - **Topic**: Requires title, type=topic.
+    - **Direct**: Requires participants, type=direct (default).
+    """
+    try:
+        service = ConversationService(db)
+        conversation = await service.create_conversation(request)
+        
+        return ConversationResponse(
+            id=str(conversation.id),
+            participant_from=conversation.participant_from,
+            participant_to=conversation.participant_to,
+            channel_type=conversation.channel_type.value,
+            type=conversation.type,
+            status=conversation.status.value,
+            title=conversation.title,
+            last_message_at=conversation.last_message_at,
+            message_count=conversation.message_count,
+            unread_count=conversation.unread_count,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+            metadata=conversation.meta_data or {}
+        )
+    except Exception as e:
+        logger.error(f"Failed to create conversation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
 
 
 @router.get("/{conversation_id}", response_model=ConversationResponse)
@@ -48,6 +84,7 @@ async def get_conversation(
             participant_from=conversation.participant_from,
             participant_to=conversation.participant_to,
             channel_type=conversation.channel_type.value,
+            type=conversation.type,
             status=conversation.status.value,
             title=conversation.title,
             last_message_at=conversation.last_message_at,
@@ -64,6 +101,7 @@ async def get_conversation(
                 MessageResponse(
                     id=str(msg.id),
                     conversation_id=str(msg.conversation_id),
+                    parent_id=str(msg.parent_id) if msg.parent_id else None,
                     provider=msg.provider.value if msg.provider else None,
                     provider_message_id=msg.provider_message_id,
                     direction=msg.direction.value,
@@ -96,6 +134,7 @@ async def list_conversations(
     participant: Optional[str] = Query(None, description="Filter by participant"),
     channel_type: Optional[MessageType] = Query(None, description="Filter by channel type"),
     status: Optional[ConversationStatus] = Query(None, description="Filter by status"),
+    type: Optional[ConversationType] = Query(None, description="Filter by conversation type"),
     limit: int = Query(50, ge=1, le=100, description="Number of items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     db: AsyncSession = Depends(get_db)
@@ -103,7 +142,7 @@ async def list_conversations(
     """
     List conversations with optional filters.
     
-    Supports filtering by participant, channel type, and status.
+    Supports filtering by participant, channel type, status, and conversation type.
     Results are paginated and ordered by last message time (newest first).
     """
     try:
@@ -113,6 +152,7 @@ async def list_conversations(
             participant=participant,
             channel_type=channel_type,
             status=status,
+            type=type,
             limit=limit,
             offset=offset
         )
@@ -125,6 +165,7 @@ async def list_conversations(
                 participant_from=conv.participant_from,
                 participant_to=conv.participant_to,
                 channel_type=conv.channel_type.value,
+                type=conv.type,
                 status=conv.status.value,
                 title=conv.title,
                 last_message_at=conv.last_message_at,
@@ -175,6 +216,7 @@ async def update_conversation(
             participant_from=conversation.participant_from,
             participant_to=conversation.participant_to,
             channel_type=conversation.channel_type.value,
+            type=conversation.type,
             status=conversation.status.value,
             title=conversation.title,
             last_message_at=conversation.last_message_at,
@@ -247,6 +289,7 @@ async def search_conversations(
                 participant_from=conv.participant_from,
                 participant_to=conv.participant_to,
                 channel_type=conv.channel_type.value,
+                type=conv.type,
                 status=conv.status.value,
                 title=conv.title,
                 last_message_at=conv.last_message_at,

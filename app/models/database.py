@@ -104,6 +104,12 @@ class Provider(str, enum.Enum):
     MOCK = "mock"
 
 
+
+class ConversationType(str, enum.Enum):
+    """Conversation type enumeration."""
+    DIRECT = "direct"
+    TOPIC = "topic"
+
 class Conversation(Base):
     """
     Conversation model representing a thread of messages between participants.
@@ -111,14 +117,20 @@ class Conversation(Base):
     __tablename__ = "conversations"
     
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    participant_from = Column(String(255), nullable=False, index=True)
-    participant_to = Column(String(255), nullable=False, index=True)
+    participant_from = Column(String(255), nullable=True, index=True)
+    participant_to = Column(String(255), nullable=True, index=True)
     channel_type = Column(Enum(MessageType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     status = Column(
         Enum(ConversationStatus, values_callable=lambda x: [e.value for e in x]), 
         default=ConversationStatus.ACTIVE,
         nullable=False,
         index=True
+    )
+    type = Column(
+        Enum(ConversationType, values_callable=lambda x: [e.value for e in x]),
+        default=ConversationType.DIRECT,
+        nullable=False,
+        server_default="direct"
     )
     
     # Conversation metadata
@@ -169,7 +181,7 @@ class Conversation(Base):
     )
     
     def __repr__(self):
-        return f"<Conversation(id={self.id}, from={self.participant_from}, to={self.participant_to})>"
+        return f"<Conversation(id={self.id}, type={self.type}, title={self.title})>"
 
 
 class Message(Base):
@@ -183,6 +195,11 @@ class Message(Base):
         UUID,
         ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False
+    )
+    parent_id = Column(
+        UUID,
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=True
     )
     
     # Provider information
@@ -240,6 +257,7 @@ class Message(Base):
     
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
+    parent = relationship("Message", remote_side=[id], backref="replies")
     events = relationship(
         "MessageEvent",
         back_populates="message",

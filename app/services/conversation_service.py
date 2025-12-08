@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.database import (
-    Conversation, Message, ConversationStatus, MessageType
+    Conversation, Message, ConversationStatus, MessageType, ConversationType
 )
+from app.api.v1.models import CreateConversationRequest
 from app.db.redis import redis_manager
 from app.core.observability import get_logger, MetricsCollector, trace_operation
 
@@ -23,13 +24,103 @@ class ConversationService:
     """Service for handling conversation operations."""
     
     def __init__(self, db_session: AsyncSession):
+        self.db = db_session
+
+    @trace_operation("create_conversation")
+    async def create_conversation(
+        self,
+        request: CreateConversationRequest
+    ) -> Conversation:
         """
-        Initialize conversation service.
+        Create a new conversation or topic.
         
         Args:
-            db_session: Database session
+            request: Creation request
+            
+        Returns:
+            Created Conversation
         """
-        self.db = db_session
+        try:
+            # For DIRECT, check if exists
+            if request.type == ConversationType.DIRECT:
+                existing = await self._find_direct_conversation(
+                    request.participant_from,
+                    request.participant_to,
+                    request.channel_type
+                )
+                if existing:
+                    return existing
+
+            # For TOPIC, check if exists by title
+            elif request.type == ConversationType.TOPIC:
+                existing = await self._find_topic(request.title)
+                if existing:
+                    return existing
+            
+            conversation = Conversation(
+                type=request.type,
+                participant_from=request.participant_from,
+                participant_to=request.participant_to,
+                channel_type=request.channel_type,
+                title=request.title,
+                status=ConversationStatus.ACTIVE,
+                meta_data=request.metadata or {}
+            )
+            
+            self.db.add(conversation)
+            await self.db.commit()
+            await self.db.refresh(conversation)
+            
+            logger.info(
+                "Conversation created",
+                conversation_id=str(conversation.id),
+                type=request.type.value
+            )
+            
+            return conversation
+            
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Failed to create conversation: {e}")
+            raise
+
+    async def _find_direct_conversation(
+        self, 
+        p1: str, 
+        p2: str, 
+        channel: MessageType
+    ) -> Optional[Conversation]:
+        """Find existing direct conversation between two participants."""
+        query = select(Conversation).where(
+            and_(
+                Conversation.type == ConversationType.DIRECT,
+                Conversation.channel_type == channel,
+                or_(
+                    and_(
+                        Conversation.participant_from == p1,
+                        Conversation.participant_to == p2
+                    ),
+                    and_(
+                        Conversation.participant_from == p2,
+                        Conversation.participant_to == p1
+                    )
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+    
+    async def _find_topic(self, title: str) -> Optional[Conversation]:
+        """Find existing topic by title."""
+        query = select(Conversation).where(
+            and_(
+                Conversation.type == ConversationType.TOPIC,
+                Conversation.title == title,
+                Conversation.status != ConversationStatus.CLOSED
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
     
     @trace_operation("get_conversation")
     async def get_conversation(
@@ -63,9 +154,11 @@ class ConversationService:
                     
                     conversation = Conversation(
                         id=uuid.UUID(cached_data["id"]),
-                        participant_from=cached_data["participant_from"],
-                        participant_to=cached_data["participant_to"],
+                        participant_from=cached_data.get("participant_from"),
+                        participant_to=cached_data.get("participant_to"),
                         channel_type=MessageType(cached_data["channel_type"]),
+                        # Default to DIRECT if not in cache (backwards compat)
+                        type=ConversationType(cached_data.get("type", "direct")),
                         status=ConversationStatus(cached_data["status"]),
                         message_count=cached_data["message_count"],
                         unread_count=cached_data["unread_count"],
@@ -104,6 +197,7 @@ class ConversationService:
                     "participant_from": conversation.participant_from,
                     "participant_to": conversation.participant_to,
                     "channel_type": conversation.channel_type.value,
+                    "type": conversation.type.value,
                     "status": conversation.status.value,
                     "message_count": conversation.message_count,
                     "unread_count": conversation.unread_count,
@@ -130,6 +224,7 @@ class ConversationService:
         participant: Optional[str] = None,
         channel_type: Optional[MessageType] = None,
         status: Optional[ConversationStatus] = None,
+        type: Optional[ConversationType] = None,
         limit: int = 50,
         offset: int = 0
     ) -> tuple[List[Conversation], int]:
@@ -140,6 +235,7 @@ class ConversationService:
             participant: Filter by participant (from or to)
             channel_type: Filter by channel type
             status: Filter by status
+            type: Filter by conversation type
             limit: Max results
             offset: Skip results
             
@@ -162,6 +258,9 @@ class ConversationService:
             
             if status:
                 query = query.where(Conversation.status == status)
+
+            if type:
+                query = query.where(Conversation.type == type)
             
             # Get total count before pagination
             count_query = select(func.count()).select_from(Conversation)
@@ -176,6 +275,8 @@ class ConversationService:
                 count_query = count_query.where(Conversation.channel_type == channel_type)
             if status:
                 count_query = count_query.where(Conversation.status == status)
+            if type:
+                count_query = count_query.where(Conversation.type == type)
             
             count_result = await self.db.execute(count_query)
             total = count_result.scalar() or 0
@@ -186,20 +287,6 @@ class ConversationService:
             
             result = await self.db.execute(query)
             conversations = result.scalars().all()
-            
-            # Update metrics
-            if not offset:  # Only count on first page
-                for channel in MessageType:
-                    metrics_query = select(func.count()).select_from(Conversation)
-                    metrics_query = metrics_query.where(
-                        and_(
-                            Conversation.channel_type == channel,
-                            Conversation.status == ConversationStatus.ACTIVE
-                        )
-                    )
-                    metrics_result = await self.db.execute(metrics_query)
-                    count = metrics_result.scalar()
-                    MetricsCollector.update_conversation_count(channel.value, count)
             
             return conversations, total
             

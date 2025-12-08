@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/alexeytyurin/Library/CloudStorage/OneDrive-Personal/MyBackup/TechInterview/hatch/messaging-service/tests/verify_db_content.py", line 6, in <module>
+    from app.db.session import async_session
+ModuleNotFoundError: No module named 'app'

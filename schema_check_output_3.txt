@@ -1,0 +1,15 @@
+
+--- Conversations Attributes ---
+Column: type, Type: USER-DEFINED
+Column: created_at, Type: timestamp with time zone
+Column: updated_at, Type: timestamp with time zone
+Column: id, Type: uuid
+Column: channel_type, Type: USER-DEFINED
+Column: status, Type: USER-DEFINED
+Column: last_message_at, Type: timestamp with time zone
+Column: message_count, Type: integer
+Column: unread_count, Type: integer
+Column: meta_data, Type: json
+Column: participant_from, Type: character varying
+Column: participant_to, Type: character varying
+Column: title, Type: character varying

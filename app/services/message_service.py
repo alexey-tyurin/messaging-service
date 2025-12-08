@@ -60,16 +60,36 @@ class MessageService:
                 message_data.get("metadata", {})
             )
             
-            # Get or create conversation
-            conversation = await self._get_or_create_conversation(
-                from_address=message_data["from"],
-                to_address=message_data["to"],
-                channel_type=message_type
-            )
+            conversation = None
+            parent_id = message_data.get("parent_id")
+            
+            # Handle Threading
+            if parent_id:
+                parent_msg = await self.db.get(Message, parent_id)
+                if not parent_msg:
+                    raise ValueError(f"Parent message not found: {parent_id}")
+                conversation = await self.db.get(Conversation, parent_msg.conversation_id)
+                if not conversation:
+                     raise ValueError(f"Parent conversation not found") # Should not happen
+            
+            # Handle Direct to Conversation (Topic)
+            elif self._is_valid_uuid(message_data["to"]):
+                conversation = await self.db.get(Conversation, message_data["to"])
+                # If not found, fall back to creation (maybe 'to' just looks like UUID but is a weird address?)
+                # But safer to assume if it matches UUID format and exists, it's a target conversation.
+            
+            # Default: Get or Create Direct Conversation
+            if not conversation:
+                 conversation = await self._get_or_create_conversation(
+                    from_address=message_data["from"],
+                    to_address=message_data["to"],
+                    channel_type=message_type
+                )
             
             # Create message record with provider assigned
             message = Message(
                 conversation_id=conversation.id,
+                parent_id=parent_id,
                 provider=Provider(provider.name),
                 direction=MessageDirection.OUTBOUND,
                 status=MessageStatus.PENDING,
@@ -129,12 +149,22 @@ class MessageService:
                     conversation_id=str(conversation.id)
                 )
             
+            # Refresh message to ensure attributes are loaded for Pydantic validation
+            await self.db.refresh(message)
+            
             return message
             
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to send message: {e}", message_data=message_data)
             raise
+
+    def _is_valid_uuid(self, val: str) -> bool:
+        try:
+            uuid.UUID(str(val))
+            return True
+        except ValueError:
+            return False
     
     @trace_operation("process_outbound_message")
     async def process_outbound_message(self, message_id: str) -> bool:
