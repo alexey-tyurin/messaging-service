@@ -1,25 +1,28 @@
-# Backend Interview Project
+# Backend Project for Messaging Service
 
-This is a scaffold for Hatch's backend interview project. It includes basic setup for development, testing, and deployment.
 
 ---
 
 ## 🚀 Quick Start (For Running the Application)
 
 ```bash
-# 1. Activate your conda environment
+# 1. Clone the repository:
+git clone git@github.com:alexey-tyurin/messaging-service.git
+cd messaging-service
+
+# 2. Activate your conda environment
 conda activate py311
 
-# 2. Start Docker services (PostgreSQL & Redis)
+# 3. Start Docker services (PostgreSQL & Redis)
 docker compose up -d postgres redis
 
-# 3. Run the application
+# 4. Run the application
 make run
 
-# 4. Stop the application
+# 5. Stop the application
 make stop
 
-# 5. Restart the application
+# 6. Restart the application
 make restart-app
 ```
 
@@ -32,37 +35,18 @@ make restart-app
 
 ---
 
-## Guidelines
-
-At Hatch, we work with several message providers to offer a unified way for our Customers to  communicate to their Contacts. Today we offer SMS, MMS, email, voice calls, and voicemail drops. Your task is to implement an HTTP service that supports the core messaging functionality of Hatch, on a much smaller scale. Specific instructions and guidelines on completing the project are below.
-
-### General Guidelines
-
-- You must use one of the following programming languages:
-  - **Python**
-  - **Golang**
-  - **Elixir**
-  - **Java**
-  - **Typescript/Javascript**
-  - **C/C++**
-- You may use whatever libraries or frameworks you'd like within your chosen language. We strongly encourage you to use whatever you're most familiar with so that you can showcase your skills and know-how.
-- You are welcome to use AI, Google, StackOverflow, etc as resources while you're developing. We just ask that you understand the code very well, because we will continue developing on it during your onsite interview.
-- For ease of assessment, we strongly encourage you to use the `start.sh` script provided in the `bin/` directory, and implement it to run your service. We will run this script to start your project during our assessment.
-
-### Project-specific guidelines
-
-- Assume that a provider may return HTTP error codes like 500, 429 and plan accordingly
-- Conversations consist of messages from multiple providers. Feel free to consult providers such as Twilio or Sendgrid docs when designing your solution, but all external resources should be mocked out by your project. We do not expect you to actually integrate with a third party provider as part of this project.
-- It's OK to use Google or a coding assistant to produce your code. Just make sure you know it well, because the next step will be to code additional features in this codebase with us during your full interview.
-
-## Requirements
+## Project Requirements
 
 The service should implement:
 
 - **Unified Messaging API**: HTTP endpoints to send and receive messages from both SMS/MMS and Email providers
   - Support sending messages through the appropriate provider based on message type
   - Handle incoming webhook messages from both providers
-- **Conversation Management**: Messages should be automatically grouped into conversations based on participants (from/to addresses)
+  - Conversations consist of messages from multiple providers
+  - Provider may return HTTP error codes like 500, 429 and plan accordingly
+  - All external resources should be mocked out by project
+- **Conversation Management**: Messages should be automatically grouped into conversations based on participants (from/to addresses).
+  Conversations consist of messages from multiple providers.
 - **Data Persistence**: All conversations and messages must be stored in a relational database with proper relationships and indexing
 
 ### Providers
@@ -116,7 +100,7 @@ The service should implement:
 
 ```json
 {
-    "from": "[user@usehatchapp.com](mailto:user@usehatchapp.com)",
+    "from": "[user@useapp.com](mailto:user@useapp.com)",
     "to": "[contact@gmail.com](mailto:contact@gmail.com)",
     "xillio_id": "message-2",
     "body": "<html><body>html is <b>allowed</b> here </body></html>",  "attachments": ["attachment-url"] | [],
@@ -128,55 +112,10 @@ The service should implement:
 
 ```json
 {
-    "from": "[user@usehatchapp.com](mailto:user@usehatchapp.com)",
+    "from": "[user@useapp.com](mailto:user@useapp.com)",
     "to": "[contact@gmail.com](mailto:contact@gmail.com)",
     "body": "text message with or without html",
     "attachments": ["attachment-url"] | [],
     "timestamp": "2024-11-01T14:00:00Z" // UTC timestamp
 }
 ```
-
-### Project Structure
-
-This project structure is laid out for you already. You are welcome to move or change things, just update the Makefile, scripts, and/or docker resources accordingly. As part of the evaluation of your code, we will run
-
-```
-.
-├── bin/                    # Scripts and executables
-│   ├── start.sh           # Application startup script
-│   └── test.sh            # API testing script with curl commands
-├── docker-compose.yml      # PostgreSQL database setup
-├── Makefile               # Build and development commands with docker-compose integration
-└── README.md              # This file
-```
-
-## Getting Started
-
-1. Clone the repository
-2. Run `make setup` to initialize the project
-3. Run `docker-compose up -d` to start the PostgreSQL database, or modify it to choose a database of your choice
-4. Run `make run` to start the application
-5. Run `make test` to run tests
-
-## Development
-
-- Use `docker-compose up -d` to start the PostgreSQL database
-- Use `make run` to start the development server
-- Use `make test` to run tests
-- Use `docker-compose down` to stop the database
-
-## Database
-
-The application uses PostgreSQL as its database. The docker-compose.yml file sets up:
-- PostgreSQL 15 with Alpine Linux
-- Database: `messaging_service`
-- User: `messaging_user`
-- Password: `messaging_password`
-- Port: `5432` (exposed to host)
-
-To connect to the database directly:
-```bash
-docker-compose exec postgres psql -U messaging_user -d messaging_service
-```
-
-Again, you are welcome to make changes here, as long as they're in the docker-compose.yml

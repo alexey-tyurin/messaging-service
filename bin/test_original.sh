@@ -43,7 +43,7 @@ echo "3. Testing Email send..."
 curl -X POST "$BASE_URL/api/messages/email" \
   -H "$CONTENT_TYPE" \
   -d '{
-    "from": "user@usehatchapp.com",
+    "from": "user@useapp.com",
     "to": "contact@gmail.com",
     "body": "Hello! This is a test email message with <b>HTML</b> formatting.",
     "attachments": ["https://example.com/document.pdf"],
@@ -87,7 +87,7 @@ curl -X POST "$BASE_URL/api/webhooks/email" \
   -H "$CONTENT_TYPE" \
   -d '{
     "from": "contact@gmail.com",
-    "to": "user@usehatchapp.com",
+    "to": "user@useapp.com",
     "xillio_id": "message-3",
     "body": "<html><body>This is an incoming email with <b>HTML</b> content</body></html>",
     "attachments": ["https://example.com/received-document.pdf"],

@@ -51,7 +51,7 @@ Both APIs use the same underlying services and database, ensuring consistent beh
 **Request Body**:
 ```json
 {
-  "from": "user@usehatchapp.com",
+  "from": "user@useapp.com",
   "to": "contact@gmail.com",
   "body": "Hello! This is a test email with <b>HTML</b>.",
   "attachments": ["https://example.com/document.pdf"],
@@ -111,7 +111,7 @@ Both APIs use the same underlying services and database, ensuring consistent beh
 ```json
 {
   "from": "contact@gmail.com",
-  "to": "user@usehatchapp.com",
+  "to": "user@useapp.com",
   "xillio_id": "message-3",
   "body": "<html><body>HTML content</body></html>",
   "attachments": ["https://example.com/document.pdf"],

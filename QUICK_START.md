@@ -123,7 +123,7 @@ curl -X POST http://localhost:8080/api/v1/messages/send \
     "from": "+15551234567",
     "to": "+15559876543",
     "type": "sms",
-    "body": "Hello from Hatch!"
+    "body": "Hello!"
   }'
 
 # Should return status: "pending"
